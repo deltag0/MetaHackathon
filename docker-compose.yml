@@ -1,0 +1,23 @@
+name: url-shortner
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./otel/config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 8889:8889
+      - 4318:4318
