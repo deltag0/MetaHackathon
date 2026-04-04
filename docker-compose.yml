@@ -13,6 +13,21 @@ services:
       - 9090:9090
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - 9100:9100
+
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    command:
+      - --config.path
+      - /etc/process-exporter/config.yml
+    volumes:
+      - ./prometheus/process-exporter.yml:/etc/process-exporter/config.yml:ro
+    ports:
+      - 9256:9256
     
   otel:
     image: otel/opentelemetry-collector-contrib:latest

@@ -1,0 +1,20 @@
+process_names:
+  - name: "python"
+    cmdline:
+      - ".*python.*"
+
+  - name: "node"
+    cmdline:
+      - ".*node.*"
+
+  - name: "nginx"
+    cmdline:
+      - ".*nginx.*"
+
+  - name: "postgres"
+    cmdline:
+      - ".*postgres.*"
+
+  - name: "otelcol"
+    cmdline:
+      - ".*otelcol.*"

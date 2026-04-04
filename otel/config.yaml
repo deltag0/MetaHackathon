@@ -1,19 +1,12 @@
-receivers: # push based
+receivers:
   otlp:
     protocols:
       http:
-        endpoint: localhost:4318 # Otel hosted endpoint
+        endpoint: 0.0.0.0:4318
+
+exporters:
   prometheus:
-    config:
-      scrape_configs:
-        - job_name: otel-collector
-          scrape_interval: 5s
-          static_configs:
-            - targets: [localhost:8888]
-  
-exporters: # pull based
-  prometheus:
-    endpoint: 0.0.0.0:8889 # prometheus will scrape from here
+    endpoint: 0.0.0.0:8889
   debug:
     verbosity: detailed
 
