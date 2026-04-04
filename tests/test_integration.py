@@ -347,7 +347,7 @@ def test_500_handler_body(client):
 # Health: DB and cache failure paths
 
 def test_health_ready_db_failure_returns_503(client):
-    with patch("app.database.db.execute_sql", create=True, side_effect=Exception("connection refused")):
+    with patch("app.check_db_connection", side_effect=Exception("connection refused")):
         r = client.get("/health/ready")
     assert r.status_code == 503
     data = r.get_json()
@@ -356,7 +356,7 @@ def test_health_ready_db_failure_returns_503(client):
 
 
 def test_health_db_failure_returns_503(client):
-    with patch("app.database.db.execute_sql", create=True, side_effect=Exception("db error")):
+    with patch("app.check_db_connection", side_effect=Exception("db error")):
         r = client.get("/health")
     assert r.status_code == 503
     assert r.get_json()["status"] == "degraded"

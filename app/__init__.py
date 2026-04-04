@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-from app.database import init_db, db
+from app.database import init_db, db, check_db_connection
 from app.cache import init_cache
 from app.models.user import User
 from app.models.url import URL
@@ -31,7 +31,7 @@ def create_app():
     def _dependency_status():
         """Check DB and Redis. Returns (db_status, cache_status)."""
         try:
-            db.execute_sql("SELECT 1")
+            check_db_connection()
             db_status = "ok"
         except Exception as e:
             db_status = str(e)
