@@ -97,8 +97,11 @@ def create_event():
     if not event_type:
         return jsonify(error="event_type is required"), 400
 
-    if not URL.get_or_none(URL.id == url_id):
+    url = URL.get_or_none(URL.id == url_id)
+    if not url:
         return jsonify(error="url not found"), 404
+    if not url.is_active:
+        return jsonify(error="url is inactive"), 400
 
     if details is not None and not isinstance(details, dict):
         return jsonify(error="details must be a JSON object"), 400
