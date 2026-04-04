@@ -1,5 +1,4 @@
 """Integration tests — Flask test client + real DB."""
-import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +171,7 @@ def test_list_links_excludes_deleted(client):
     code = shorten(client, "https://listdel.example.com").get_json()["short_code"]
     client.delete(f"/api/links/{code}")
     r = client.get("/api/links")
-    urls = [l["short_code"] for l in r.get_json()["links"]]
+    urls = [link["short_code"] for link in r.get_json()["links"]]
     assert code not in urls
 
 
