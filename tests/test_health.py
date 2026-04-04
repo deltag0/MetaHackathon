@@ -1,9 +1,6 @@
-from app import create_app
-
-
-def test_health_endpoint():
-    app = create_app()
-    client = app.test_client()
+def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.get_json() == {"status": "ok"}
+    data = response.get_json()
+    assert data["status"] == "ok"
+    assert data["db"] == "ok"

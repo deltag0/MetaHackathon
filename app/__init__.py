@@ -32,12 +32,27 @@ def create_app():
             db_status = str(e)
 
         from app.cache import get_cache
+        cache = get_cache()
         try:
-            get_cache().ping()
+            if cache:
+                cache.ping()
             cache_status = "ok"
         except Exception as e:
             cache_status = str(e)
 
-        return jsonify(status="ok", db=db_status, cache=cache_status)
+        status_code = 200 if db_status == "ok" else 503
+        return jsonify(status="ok" if db_status == "ok" else "degraded", db=db_status, cache=cache_status), status_code
+
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify(error="not found"), 404
+
+    @app.errorhandler(405)
+    def method_not_allowed(e):
+        return jsonify(error="method not allowed"), 405
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        return jsonify(error="internal server error"), 500
 
     return app

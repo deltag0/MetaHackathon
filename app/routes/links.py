@@ -88,8 +88,11 @@ def shorten():
 
 @links_bp.route("/api/links", methods=["GET"])
 def list_links():
-    page = int(request.args.get("page", 1))
-    per_page = int(request.args.get("per_page", 20))
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 20))
+    except (ValueError, TypeError):
+        return jsonify(error="page and per_page must be integers"), 400
 
     query = URL.select().where(URL.is_active == True).order_by(URL.created_at.desc())
     total = query.count()
