@@ -18,7 +18,7 @@ def _log_click(url_id, details):
         Event.create(
             url_id=url_id,
             user_id=None,
-            event_type="clicked",
+            event_type="click",
             timestamp=datetime.utcnow(),
             details=details,
         )
