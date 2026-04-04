@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime
 
 import base62
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, redirect, current_app, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
