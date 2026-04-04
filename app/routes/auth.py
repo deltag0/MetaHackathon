@@ -46,6 +46,11 @@ def register():
         created_at=datetime.utcnow(),
     )
 
+    current_app.logger.info(
+        "user_registered",
+        extra={"component": "auth", "endpoint": "auth.register", "user_id": user.id, "value": email},
+    )
+
     return jsonify(
         session_token=_make_session_token(user.id),
         user={"id": user.id, "email": user.email},

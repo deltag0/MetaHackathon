@@ -2,7 +2,7 @@ import csv
 import os
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -10,7 +10,9 @@ from app.models.event import Event
 from app.models.url import URL
 from app.models.user import User
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -31,9 +33,18 @@ def get_users_list():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            "invalid_pagination_parameters",
+            extra={
+                "component": "users",
+                "endpoint": "users.get_users_list",
+                "param": "page_or_per_page",
+                "value": request.args.get("page") or request.args.get("per_page"),
+            },
+        )
         return jsonify(error="page and per_page must be integers"), 400
 
-    cache_key = f"users:list:{page}:{per_page}"
+    cache_key = "users:list:" + str(page) + ":" + str(per_page)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -56,7 +67,11 @@ def load_users_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        return jsonify(error=f"{filename} not found"), 404
+        current_app.logger.error(
+            "file_not_found",
+            extra={"component": "users", "endpoint": "users.load_users_csv", "resource": filepath},
+        )
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}
     now = str(datetime.utcnow())
@@ -70,7 +85,7 @@ def load_users_csv():
 
     with db.atomic():
         for i in range(0, len(cleaned), 100):
-            User.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
+            User.insert_many(cleaned[i : i + 100]).on_conflict_ignore().execute()
 
     db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));")
 
@@ -79,7 +94,7 @@ def load_users_csv():
 
 @users_bp.route("/<int:user_id>", methods=["GET"])
 def get_user(user_id):
-    cache_key = f"users:{user_id}"
+    cache_key = "users:" + str(user_id)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -137,7 +152,7 @@ def update_user(user_id):
     user.updated_at = datetime.utcnow()
     user.save()
 
-    cache_delete(f"users:{user_id}")
+    cache_delete("users:" + str(user_id))
     cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user))
 
@@ -156,7 +171,7 @@ def delete_user(user_id):
     # Now safe to delete URLs and user
     URL.delete().where(URL.user == user_id).execute()
     user.delete_instance()
-    cache_delete(f"users:{user_id}")
+    cache_delete("users:" + str(user_id))
     cache_delete_pattern("users:list:*")
     cache_delete_pattern("urls:list:*")
     cache_delete_pattern("events:list:*")

@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import current_app, Blueprint, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete_pattern
 from app.database import db
@@ -33,7 +33,7 @@ def list_events():
     user_id = request.args.get("user_id")
     event_type = request.args.get("event_type")
 
-    cache_key = f"events:list:{url_id}:{user_id}:{event_type}"
+    cache_key = "events:list:" + str(url_id) + ":" + str(user_id) + ":" + str(event_type)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -44,12 +44,20 @@ def list_events():
         try:
             query = query.where(Event.url == int(url_id))
         except (ValueError, TypeError):
+            current_app.logger.warning(
+                "invalid_filter",
+                extra={"component": "events", "endpoint": "events.list_events", "param": "url_id", "value": str(url_id)},
+            )
             return jsonify(error="url_id must be an integer"), 400
 
     if user_id is not None:
         try:
             query = query.where(Event.user == int(user_id))
         except (ValueError, TypeError):
+            current_app.logger.warning(
+                "invalid_filter",
+                extra={"component": "events", "endpoint": "events.list_events", "param": "user_id", "value": str(user_id)},
+            )
             return jsonify(error="user_id must be an integer"), 400
 
     if event_type is not None:
@@ -58,6 +66,10 @@ def list_events():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            "invalid_limit_parameter",
+            extra={"component": "events", "endpoint": "events.list_events", "param": "limit", "value": str(request.args.get("limit"))},
+        )
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -76,7 +88,11 @@ def load_events_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        return jsonify(error=f"{filename} not found"), 404
+        current_app.logger.error(
+            "file_not_found",
+            extra={"component": "events", "endpoint": "events.load_events_csv", "resource": filepath},
+        )
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "url_id", "user_id", "event_type", "timestamp", "details"}
     now = str(datetime.utcnow())
@@ -87,6 +103,10 @@ def load_events_csv():
             try:
                 entry["details"] = json.loads(entry["details"])
             except (ValueError, TypeError):
+                current_app.logger.warning(
+                    "invalid_event_details_format",
+                    extra={"component": "events", "endpoint": "events.load_events_csv", "value": str(row)},
+                )
                 entry["details"] = None
         entry.setdefault("timestamp", now)
         cleaned.append(entry)

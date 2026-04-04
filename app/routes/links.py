@@ -3,7 +3,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import base62
-from flask import Blueprint, jsonify, request
+from flask import current_app, Blueprint, jsonify, request
 
 from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
@@ -21,6 +21,10 @@ def _valid_url(url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:
+        current_app.logger.warning(
+            "invalid_url_format",
+            extra={"component": "links", "endpoint": "links._valid_url", "param": "url", "value": url},
+        )
         return False
 
 
@@ -35,7 +39,10 @@ def _log_event(url_id, user_id, event_type, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
-        pass
+        current_app.logger.error(
+            "event_logging_failed",
+            extra={"component": "links", "endpoint": "links._log_event", "value": str(details)},
+        )
 
 
 @links_bp.route("/shorten", methods=["POST"])
@@ -55,12 +62,14 @@ def shorten():
     if existing:
         return jsonify(
             short_code=existing.short_code,
-            short_url=f"{request.host_url}{existing.short_code}",
+            short_url=request.host_url + existing.short_code,
             original_url=existing.original_url,
             title=existing.title,
         )
 
     short_code = _generate_short_code()
+
+    # ! should add measure to prevent infinite loop
     while URL.select().where(URL.short_code == short_code).exists():
         short_code = _generate_short_code()
 
@@ -78,7 +87,7 @@ def shorten():
 
     return jsonify(
         short_code=short_code,
-        short_url=f"{request.host_url}{short_code}",
+        short_url=request.host_url + short_code,
         original_url=original_url,
         title=title,
     ), 201
@@ -91,6 +100,15 @@ def list_links():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            "invalid_pagination_parameters",
+            extra={
+                "component": "links",
+                "endpoint": "links.list_links",
+                "param": "page_or_per_page",
+                "value": request.args.get("page") or request.args.get("per_page"),
+            },
+        )
         return jsonify(error="page and per_page must be integers"), 400
 
     query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
@@ -168,9 +186,12 @@ def update_link(code):
     cache = get_cache()
     if cache:
         try:
-            cache.delete(f"url:{code}")
+            cache.delete("url:" + code)
         except Exception:
-            pass
+            current_app.logger.error(
+                "cache_delete_failed",
+                extra={"component": "cache", "endpoint": "links.update_link", "short_code": code},
+            )
 
     _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
 
@@ -196,9 +217,12 @@ def delete_link(code):
     cache = get_cache()
     if cache:
         try:
-            cache.delete(f"url:{code}")
+            cache.delete("url:" + code)
         except Exception:
-            pass
+            current_app.logger.error(
+                "cache_delete_failed",
+                extra={"component": "cache", "endpoint": "links.delete_link", "short_code": code},
+            )
 
     _log_event(url.id, None, "deleted", {"short_code": code})
 

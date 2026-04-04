@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from flask import Blueprint, jsonify, redirect, request
+from flask import Blueprint, current_app, jsonify, redirect, request
 
 from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
@@ -24,6 +24,10 @@ def _log_click(url_id, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
+        current_app.logger.error(
+            "click_event_logging_failed",
+            extra={"component": "redirect", "endpoint": "redirect._log_click", "value": str(details)},
+        )
         pass
 
 
@@ -51,7 +55,10 @@ def follow(code):
                 _log_click(cached["id"], details)
                 return redirect(cached["original_url"], code=302)
         except Exception:
-            pass
+            current_app.logger.error(
+                "cache_fetch_failed",
+                extra={"component": "cache", "endpoint": "redirect.follow", "short_code": code},
+            )
 
     url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
@@ -61,7 +68,10 @@ def follow(code):
         try:
             cache.set(f"url:{code}", json.dumps({"id": url.id, "original_url": url.original_url, "is_active": True}), ex=CACHE_TTL)
         except Exception:
-            pass
+            current_app.logger.error(
+                "cache_set_failed",
+                extra={"component": "cache", "endpoint": "redirect.follow", "short_code": code},
+            )
 
     _log_click(url.id, details)
     return redirect(url.original_url, code=302)

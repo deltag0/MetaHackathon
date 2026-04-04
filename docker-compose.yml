@@ -1,3 +1,4 @@
+name: url-shortner
 services:
   db:
     image: postgres:16
@@ -28,6 +29,9 @@ services:
     ports:
       - "5000:5000"
     environment:
+      FLASK_DEBUG: "false"
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: "5000"
       DATABASE_NAME: hackathon_db
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
@@ -35,12 +39,99 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-/app/logs/app.log}
+    volumes:
+      - ./logs/app:/app/logs
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     restart: always
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    command:
+      - --no-collector.kernel_hung
+    ports:
+      - 9100:9100
+
+  process-exporter:
+    image: ncabatoff/process-exporter:latest
+    pid: host
+    command:
+      - --config.path
+      - /etc/process-exporter/config.yml
+    volumes:
+      - ./prometheus/process-exporter.yml:/etc/process-exporter/config.yml:ro
+    ports:
+      - 9256:9256
+    
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./otel/config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 8889:8889
+      - 4318:4318
+
+  loki:
+    image: grafana/loki:3.0.0
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-data:/tmp
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+      - loki
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 volumes:
+  grafana-data:
   postgres_data:
+  loki-data:
+  promtail-data:

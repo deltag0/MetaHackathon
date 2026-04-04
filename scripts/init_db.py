@@ -37,7 +37,7 @@ def seed_users(filepath="app/data/users.csv"):
             batch = rows[batch_start:batch_start + 100]
             User.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} users seeded.")
+    print("  " + str(len(rows)) + " users seeded.")
 
 
 def seed_urls(filepath="app/data/urls.csv"):
@@ -55,7 +55,7 @@ def seed_urls(filepath="app/data/urls.csv"):
             batch = rows[batch_start:batch_start + 100]
             URL.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} URLs seeded.")
+    print("  " + str(len(rows)) + " URLs seeded.")
 
 
 def seed_events(filepath="app/data/events.csv"):
@@ -77,7 +77,7 @@ def seed_events(filepath="app/data/events.csv"):
             batch = rows[batch_start:batch_start + 100]
             Event.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} events seeded.")
+    print("  " + str(len(rows)) + " events seeded.")
 
 
 def reset_sequences():
