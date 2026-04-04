@@ -9,7 +9,8 @@ def create_app():
     load_dotenv()
 
     app = Flask(__name__)
-
+    login_manager = LoginManager()
+    login_manager.init_app(app)
     init_db(app)
 
     from app import models  # noqa: F401 - registers models with Peewee
