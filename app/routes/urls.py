@@ -141,6 +141,7 @@ def create_url():
         updated_at=now,
     )
     cache_delete_pattern("urls:list:*")
+    cache_set(f"url:{short_code}", original_url, ttl=3600)
     _log_event(url.id, user_id, "created", {})
     return jsonify(_url_dict(url)), 201
 
