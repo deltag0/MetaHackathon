@@ -78,7 +78,10 @@ def get_user_by_id(user_id):
 @users_bp.route("", methods=["POST"])
 def create_user():
     data = request.get_json(silent=True) or {}
-    email = data.get("email", "").strip()
+    raw_email = data.get("email", "")
+    if not isinstance(raw_email, str):
+        return jsonify(error="email must be a string"), 400
+    email = raw_email.strip()
     username = data.get("username", "").strip() or None
 
     if not email:
