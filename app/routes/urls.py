@@ -7,12 +7,26 @@ import base62
 from flask import Blueprint, jsonify, request
 
 from app.database import db
+from app.models.event import Event
 from app.models.url import URL
 from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 urls_bp = Blueprint("urls", __name__, url_prefix="/urls")
+
+
+def _log_event(url_id, user_id, event_type, details):
+    try:
+        Event.create(
+            url_id=url_id,
+            user_id=user_id,
+            event_type=event_type,
+            timestamp=datetime.utcnow(),
+            details=details,
+        )
+    except Exception:
+        pass
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -110,6 +124,7 @@ def create_url():
         created_at=now,
         updated_at=now,
     )
+    _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
     return jsonify(_url_dict(url)), 201
 
 
@@ -137,6 +152,7 @@ def update_url(url_id):
     url.updated_at = datetime.utcnow()
     url.save()
 
+    _log_event(url.id, None, "updated", {"original_url": url.original_url, "title": url.title})
     return jsonify(_url_dict(url))
 
 
@@ -146,5 +162,6 @@ def delete_url(url_id):
     if not url:
         return jsonify(error="not found"), 404
 
+    _log_event(url.id, None, "deleted", {"short_code": url.short_code})
     url.delete_instance()
     return jsonify(message="deleted"), 200
