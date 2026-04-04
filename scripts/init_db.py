@@ -82,9 +82,9 @@ def seed_events(filepath="events.csv"):
 
 def reset_sequences():
     print("Resetting PostgreSQL sequences...")
-    db.execute_sql("SELECT setval('users_id_seq',  (SELECT MAX(id) FROM users));")
-    db.execute_sql("SELECT setval('urls_id_seq',   (SELECT MAX(id) FROM urls));")
-    db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events));")
+    db.execute_sql("SELECT setval('users_id_seq',  COALESCE((SELECT MAX(id) FROM users), 1));")
+    db.execute_sql("SELECT setval('urls_id_seq',   COALESCE((SELECT MAX(id) FROM urls), 1));")
+    db.execute_sql("SELECT setval('events_id_seq', COALESCE((SELECT MAX(id) FROM events), 1));")
     print("  Sequences reset.")
 
 
