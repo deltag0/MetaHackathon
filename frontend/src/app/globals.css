@@ -1,0 +1,157 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: #1a1a2e;
+  --color-foreground: #f4f4f5;
+
+  --color-primary: #22d3ee;
+  --color-primary-foreground: #1a1a2e;
+  --color-secondary: #f0abfc;
+
+  --color-muted: #232340;
+  --color-muted-foreground: #a1a1aa;
+
+  --color-accent: #22d3ee;
+  --color-accent-foreground: #1a1a2e;
+
+  --color-destructive: #f43f5e;
+
+  --color-card: #232340;
+  --color-card-foreground: #f4f4f5;
+
+  --color-popover: #232340;
+  --color-popover-foreground: #f4f4f5;
+
+  --color-border: #2e2e4a;
+  --color-input: #2e2e4a;
+  --color-ring: #22d3ee;
+
+  --color-error: #f43f5e;
+
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  --font-mono: "Fira Code", monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-full: 9999px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    font-family: "DM Sans", system-ui, sans-serif;
+    background-color: #1a1a2e;
+    color: #e4e4e7;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-family: "DM Sans", system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: rgba(34, 211, 238, 0.25);
+    color: #f4f4f5;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2e2e4a; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a56; }
+}
+
+/* ── Grain ── */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Glow ── */
+.glow-bg { position: relative; }
+.glow-bg::before {
+  content: "";
+  position: fixed;
+  top: -15%;
+  left: 20%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.06) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+.glow-bg::after {
+  content: "";
+  position: fixed;
+  bottom: -10%;
+  right: 15%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(240, 171, 252, 0.04) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Stagger ── */
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.stagger > * {
+  opacity: 0;
+  animation: reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger > *:nth-child(6) { animation-delay: 0.24s; }
+.stagger > *:nth-child(7) { animation-delay: 0.28s; }
+.stagger > *:nth-child(8) { animation-delay: 0.32s; }
+.stagger > *:nth-child(9) { animation-delay: 0.36s; }
+.stagger > *:nth-child(10) { animation-delay: 0.40s; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Focus glow ── */
+input:focus, textarea:focus {
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3), 0 0 24px -6px rgba(34, 211, 238, 0.12);
+}
+
+/* ── Button press ── */
+.btn-press:active { transform: scale(0.97); }
+
+/* ── Row hover ── */
+.row-hover { position: relative; overflow: hidden; }
+.row-hover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.015), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.row-hover:hover::after { opacity: 1; }
