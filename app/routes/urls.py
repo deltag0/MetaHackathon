@@ -6,6 +6,7 @@ from datetime import datetime
 import base62
 from flask import Blueprint, jsonify, request
 
+from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
 from app.models.event import Event
 from app.models.url import URL
@@ -47,21 +48,35 @@ def _url_dict(u):
 
 
 @urls_bp.route("", methods=["GET"])
-def get_urls_list():
+def list_urls():
+    user_id = request.args.get("user_id")
+    is_active_str = request.args.get("is_active")
+
+    cache_key = f"urls:list:{user_id}:{is_active_str}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     query = URL.select().order_by(URL.id)
 
-    user_id = request.args.get("user_id")
     if user_id is not None:
         try:
             query = query.where(URL.user == int(user_id))
         except (ValueError, TypeError):
             return jsonify(error="user_id must be an integer"), 400
 
-    is_active_str = request.args.get("is_active")
     if is_active_str is not None:
         query = query.where(URL.is_active == (is_active_str.lower() == "true"))
 
-    return jsonify([_url_dict(u) for u in query])
+    try:
+        limit = int(request.args.get("limit", 100))
+    except (ValueError, TypeError):
+        limit = 100
+    query = query.limit(min(limit, 500))
+
+    result = [_url_dict(u) for u in query]
+    cache_set(cache_key, result)
+    return jsonify(result)
 
 
 @urls_bp.route("/bulk", methods=["POST"])
@@ -124,16 +139,24 @@ def create_url():
         created_at=now,
         updated_at=now,
     )
-    _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
+    cache_delete_pattern("urls:list:*")
+    _log_event(url.id, user_id, "created", {})
     return jsonify(_url_dict(url)), 201
 
 
 @urls_bp.route("/<int:url_id>", methods=["GET"])
-def get_url_by_id(url_id):
+def get_url(url_id):
+    cache_key = f"urls:{url_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     url = URL.get_or_none(URL.id == url_id)
     if not url:
         return jsonify(error="not found"), 404
-    return jsonify(_url_dict(url))
+    result = _url_dict(url)
+    cache_set(cache_key, result)
+    return jsonify(result)
 
 
 @urls_bp.route("/<int:url_id>", methods=["PUT"])
@@ -152,7 +175,8 @@ def update_url(url_id):
     url.updated_at = datetime.utcnow()
     url.save()
 
-    _log_event(url.id, None, "updated", {"original_url": url.original_url, "title": url.title})
+    cache_delete(f"urls:{url_id}")
+    cache_delete_pattern("urls:list:*")
     return jsonify(_url_dict(url))
 
 
@@ -162,7 +186,10 @@ def delete_url(url_id):
     if not url:
         return jsonify(error="not found"), 404
 
-    _log_event(url.id, None, "deleted", {"short_code": url.short_code})
-    Event.delete().where(Event.url == url.id).execute()
+    # Delete dependent events first (FK constraint)
+    Event.delete().where(Event.url == url_id).execute()
     url.delete_instance()
+    cache_delete(f"urls:{url_id}")
+    cache_delete_pattern("urls:list:*")
+    cache_delete_pattern("events:list:*")
     return jsonify(message="deleted"), 200

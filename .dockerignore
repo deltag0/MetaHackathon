@@ -1,0 +1,11 @@
+frontend/
+.venv/
+.git/
+__pycache__/
+*.pyc
+node_modules/
+.env
+k6-testing/
+tests/
+*.md
+.github/
