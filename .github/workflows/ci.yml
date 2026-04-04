@@ -80,4 +80,12 @@ jobs:
           DATABASE_PASSWORD: postgres
           REDIS_URL: redis://localhost:6379/0
           FLASK_DEBUG: "false"
-        run: uv run pytest -v --cov=app --cov-report=term-missing --cov-fail-under=70
+        run: uv run pytest -v --cov=app --cov-branch --cov-report=term-missing --cov-report=html --cov-fail-under=70
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7

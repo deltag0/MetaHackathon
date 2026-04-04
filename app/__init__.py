@@ -23,8 +23,8 @@ def create_app():
 
     register_routes(app)
 
-    @app.route("/health", methods=["GET"])
-    def health():
+    def _dependency_status():
+        """Check DB and Redis. Returns (db_status, cache_status)."""
         try:
             db.execute_sql("SELECT 1")
             db_status = "ok"
@@ -40,8 +40,34 @@ def create_app():
         except Exception as e:
             cache_status = str(e)
 
+        return db_status, cache_status
+
+    @app.route("/health/live", methods=["GET"])
+    def health_live():
+        """Liveness probe — is the process alive? No external deps."""
+        return jsonify(status="ok"), 200
+
+    @app.route("/health/ready", methods=["GET"])
+    def health_ready():
+        """Readiness probe — are dependencies reachable?"""
+        db_status, cache_status = _dependency_status()
         status_code = 200 if db_status == "ok" else 503
-        return jsonify(status="ok" if db_status == "ok" else "degraded", db=db_status, cache=cache_status), status_code
+        return jsonify(
+            status="ok" if db_status == "ok" else "degraded",
+            db=db_status,
+            cache=cache_status,
+        ), status_code
+
+    @app.route("/health", methods=["GET"])
+    def health():
+        """Backward-compatible combined health check (same as /health/ready)."""
+        db_status, cache_status = _dependency_status()
+        status_code = 200 if db_status == "ok" else 503
+        return jsonify(
+            status="ok" if db_status == "ok" else "degraded",
+            db=db_status,
+            cache=cache_status,
+        ), status_code
 
     @app.errorhandler(404)
     def not_found(e):
