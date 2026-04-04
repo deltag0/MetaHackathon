@@ -86,12 +86,12 @@ def send_login_email(user):
 @urls_bp.post("/login")
 def login():
     data = request.get_json()
-    if not data or "username" not in data or "email" not in data:
-        return jsonify({"error": "Username and email are required"}), 400
+    if "email" not in data:
+        return jsonify({"error": "Email is required"}), 400
 
-    user = User.get_or_none(User.username == data["username"] & User.email == data["email"])
+    user = User.get_or_none(User.email == data["email"])
     if not user:
-        return jsonify({"error": "Invalid username or email"}), 401
+        return jsonify({"error": "Invalid email"}), 401
 
     send_login_email(user)
     return jsonify({"message": "Logged in successfully"}), 200
