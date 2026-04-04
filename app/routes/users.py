@@ -4,7 +4,10 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
+from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
+from app.models.event import Event
+from app.models.url import URL
 from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,9 +19,7 @@ def _user_dict(u):
     return {
         "id": u.id,
         "email": u.email,
-        "username": u.username,
         "created_at": str(u.created_at),
-        "updated_at": str(u.updated_at),
     }
 
 
@@ -30,10 +31,17 @@ def get_users_list():
     except (ValueError, TypeError):
         return jsonify(error="page and per_page must be integers"), 400
 
+    cache_key = f"users:list:{page}:{per_page}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     query = User.select().order_by(User.id)
     users = query.paginate(page, per_page)
+    result = [_user_dict(u) for u in users]
+    cache_set(cache_key, result)
 
-    return jsonify([_user_dict(u) for u in users])
+    return jsonify(result)
 
 
 @users_bp.route("/bulk", methods=["POST"])
@@ -48,14 +56,13 @@ def load_users_csv():
     except FileNotFoundError:
         return jsonify(error=f"{filename} not found"), 404
 
-    allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}
+    allowed = {"id", "email", "password_hash", "created_at"}
     now = str(datetime.utcnow())
     cleaned = []
     for row in rows:
         entry = {k: v for k, v in row.items() if k in allowed}
         entry.setdefault("password_hash", "")
         entry.setdefault("created_at", now)
-        entry.setdefault("updated_at", now)
         cleaned.append(entry)
 
     with db.atomic():
@@ -68,21 +75,24 @@ def load_users_csv():
 
 
 @users_bp.route("/<int:user_id>", methods=["GET"])
-def get_user_by_id(user_id):
+def get_user(user_id):
+    cache_key = f"users:{user_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     user = User.get_or_none(User.id == user_id)
     if not user:
         return jsonify(error="not found"), 404
-    return jsonify(_user_dict(user))
+    result = _user_dict(user)
+    cache_set(cache_key, result)
+    return jsonify(result)
 
 
 @users_bp.route("", methods=["POST"])
 def create_user():
     data = request.get_json(silent=True) or {}
-    raw_email = data.get("email", "")
-    if not isinstance(raw_email, str):
-        return jsonify(error="email must be a string"), 400
-    email = raw_email.strip()
-    username = data.get("username", "").strip() or None
+    email = data.get("email", "").strip()
 
     if not email:
         return jsonify(error="email is required"), 400
@@ -90,14 +100,12 @@ def create_user():
     if User.get_or_none(User.email == email):
         return jsonify(error="email already exists"), 409
 
-    now = datetime.utcnow()
     user = User.create(
         email=email,
-        username=username,
         password_hash=data.get("password_hash", ""),
-        created_at=now,
-        updated_at=now,
+        created_at=datetime.utcnow(),
     )
+    cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user)), 201
 
 
@@ -108,13 +116,12 @@ def update_user(user_id):
         return jsonify(error="not found"), 404
 
     data = request.get_json(silent=True) or {}
-    if "username" in data:
-        user.username = data["username"]
     if "email" in data:
         user.email = data["email"]
-    user.updated_at = datetime.utcnow()
     user.save()
 
+    cache_delete(f"users:{user_id}")
+    cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user))
 
 
@@ -124,5 +131,12 @@ def delete_user(user_id):
     if not user:
         return jsonify(error="not found"), 404
 
+    # Delete dependent events and URLs first (FK constraints)
+    Event.delete().where(Event.user == user_id).execute()
+    URL.delete().where(URL.user == user_id).execute()
     user.delete_instance()
+    cache_delete(f"users:{user_id}")
+    cache_delete_pattern("users:list:*")
+    cache_delete_pattern("urls:list:*")
+    cache_delete_pattern("events:list:*")
     return jsonify(message="deleted"), 200
