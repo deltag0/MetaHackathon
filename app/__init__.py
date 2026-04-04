@@ -19,7 +19,15 @@ def create_app():
     init_db(app)
     init_cache()
 
-    from app import models  # noqa: F401 - registers models with Peewee
+    from app.models.user import User
+    from app.models.url import URL
+    from app.models.event import Event
+
+    with app.app_context():
+        db.connect(reuse_if_open=True)
+        db.create_tables([User, URL, Event], safe=True)
+        if not db.is_closed():
+            db.close()
 
     register_routes(app)
 
