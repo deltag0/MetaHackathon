@@ -143,7 +143,7 @@ def create_url():
     )
     cache_delete_pattern("urls:list:*")
     cache_set(f"url:{short_code}", json.dumps({"id": url.id, "original_url": original_url, "is_active": True}), ttl=3600)
-    _log_event(url.id, user_id, "created", {})
+    _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
     return jsonify(_url_dict(url)), 201
 
 
