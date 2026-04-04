@@ -31,7 +31,7 @@ def _log_event(url_id, user_id, event_type, details):
     except Exception:
         current_app.logger.error(
             "event_logging_failed",
-            extra={"component": "urls", "value": str(details)},
+            extra={"component": "urls", "endpoint": "urls._log_event", "value": str(details)},
         )
 
 
@@ -70,7 +70,7 @@ def list_urls():
         except (ValueError, TypeError):
             current_app.logger.warning(
                 "invalid_user_id_parameter",
-                extra={"component": "urls", "param": "user_id", "value": str(user_id)},
+                extra={"component": "urls", "endpoint": "urls.list_urls", "param": "user_id", "value": str(user_id)},
             )
             return jsonify(error="user_id must be an integer"), 400
 
@@ -82,7 +82,7 @@ def list_urls():
     except (ValueError, TypeError):
         current_app.logger.warning(
             "invalid_limit_parameter",
-            extra={"component": "urls", "param": "limit", "value": str(request.args.get("limit"))},
+            extra={"component": "urls", "endpoint": "urls.list_urls", "param": "limit", "value": str(request.args.get("limit"))},
         )
         limit = 100
     query = query.limit(min(limit, 500))
@@ -104,7 +104,7 @@ def load_urls_csv():
     except FileNotFoundError:
         current_app.logger.error(
             "file_not_found",
-            extra={"component": "urls", "resource": filepath},
+            extra={"component": "urls", "endpoint": "urls.load_urls_csv", "resource": filepath},
         )
         return jsonify(error=filename + " not found"), 404
 

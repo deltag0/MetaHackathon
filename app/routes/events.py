@@ -46,7 +46,7 @@ def list_events():
         except (ValueError, TypeError):
             current_app.logger.warning(
                 "invalid_filter",
-                extra={"component": "events", "param": "url_id", "value": str(url_id)},
+                extra={"component": "events", "endpoint": "events.list_events", "param": "url_id", "value": str(url_id)},
             )
             return jsonify(error="url_id must be an integer"), 400
 
@@ -56,7 +56,7 @@ def list_events():
         except (ValueError, TypeError):
             current_app.logger.warning(
                 "invalid_filter",
-                extra={"component": "events", "param": "user_id", "value": str(user_id)},
+                extra={"component": "events", "endpoint": "events.list_events", "param": "user_id", "value": str(user_id)},
             )
             return jsonify(error="user_id must be an integer"), 400
 
@@ -68,7 +68,7 @@ def list_events():
     except (ValueError, TypeError):
         current_app.logger.warning(
             "invalid_limit_parameter",
-            extra={"component": "events", "param": "limit", "value": str(request.args.get("limit"))},
+            extra={"component": "events", "endpoint": "events.list_events", "param": "limit", "value": str(request.args.get("limit"))},
         )
         limit = 100
     query = query.limit(min(limit, 500))
@@ -90,7 +90,7 @@ def load_events_csv():
     except FileNotFoundError:
         current_app.logger.error(
             "file_not_found",
-            extra={"component": "events", "resource": filepath},
+            extra={"component": "events", "endpoint": "events.load_events_csv", "resource": filepath},
         )
         return jsonify(error=filename + " not found"), 404
 
@@ -105,7 +105,7 @@ def load_events_csv():
             except (ValueError, TypeError):
                 current_app.logger.warning(
                     "invalid_event_details_format",
-                    extra={"component": "events", "value": str(row)},
+                    extra={"component": "events", "endpoint": "events.load_events_csv", "value": str(row)},
                 )
                 entry["details"] = None
         entry.setdefault("timestamp", now)

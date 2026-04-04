@@ -26,7 +26,7 @@ def _log_click(url_id, details):
     except Exception:
         current_app.logger.error(
             "click_event_logging_failed",
-            extra={"component": "redirect", "value": str(details)},
+            extra={"component": "redirect", "endpoint": "redirect._log_click", "value": str(details)},
         )
         pass
 
@@ -57,7 +57,7 @@ def follow(code):
         except Exception:
             current_app.logger.error(
                 "cache_fetch_failed",
-                extra={"component": "cache", "short_code": code},
+                extra={"component": "cache", "endpoint": "redirect.follow", "short_code": code},
             )
 
     url = URL.get_or_none(URL.short_code == code, URL.is_active)
@@ -70,7 +70,7 @@ def follow(code):
         except Exception:
             current_app.logger.error(
                 "cache_set_failed",
-                extra={"component": "cache", "short_code": code},
+                extra={"component": "cache", "endpoint": "redirect.follow", "short_code": code},
             )
 
     _log_click(url.id, details)

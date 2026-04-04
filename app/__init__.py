@@ -33,6 +33,8 @@ class JsonFormatter(logging.Formatter):
             "request_id",
             "method",
             "path",
+            "endpoint",
+            "route",
             "status_code",
             "duration_ms",
             "component",
@@ -91,7 +93,7 @@ def _configure_logging(app: Flask) -> None:
 
     app.logger.info(
         "logger_configured",
-        extra={"log_level": level_name, "resource": log_file_path},
+        extra={"endpoint": "app._configure_logging", "log_level": level_name, "resource": log_file_path},
     )
 
 
@@ -112,7 +114,7 @@ def create_app():
     except Exception:
         current_app.logger.warning(
             "db_create_tables_skipped",
-            extra={"component": "db", "reason": "tables_already_exist_or_race"},
+            extra={"component": "db", "endpoint": "app.create_app", "reason": "tables_already_exist_or_race"},
         )
         pass  # Tables already created by another instance
     db.close()
@@ -134,6 +136,8 @@ def create_app():
                 "request_id": getattr(g, "request_id", ""),
                 "method": request.method,
                 "path": request.path,
+                "endpoint": request.endpoint or "unknown",
+                "route": request.url_rule.rule if request.url_rule else "unknown",
                 "status_code": response.status_code,
                 "duration_ms": round(elapsed_ms, 2),
             },
@@ -148,7 +152,12 @@ def create_app():
         except Exception as e:
             current_app.logger.error(
                 "dependency_check_failed",
-                extra={"component": "db", "error": str(e)},
+                extra={
+                    "component": "db",
+                    "endpoint": request.endpoint or "unknown",
+                    "route": request.url_rule.rule if request.url_rule else "unknown",
+                    "error": str(e),
+                },
             )
             db_status = str(e)
 
@@ -161,7 +170,12 @@ def create_app():
         except Exception as e:
             current_app.logger.error(
                 "dependency_check_failed",
-                extra={"component": "cache", "error": str(e)},
+                extra={
+                    "component": "cache",
+                    "endpoint": request.endpoint or "unknown",
+                    "route": request.url_rule.rule if request.url_rule else "unknown",
+                    "error": str(e),
+                },
             )
             cache_status = str(e)
 
@@ -202,6 +216,8 @@ def create_app():
                 "request_id": getattr(g, "request_id", ""),
                 "method": request.method,
                 "path": request.path,
+                "endpoint": request.endpoint or "unknown",
+                "route": request.url_rule.rule if request.url_rule else "unknown",
                 "status_code": 404,
             },
         )
@@ -215,6 +231,8 @@ def create_app():
                 "request_id": getattr(g, "request_id", ""),
                 "method": request.method,
                 "path": request.path,
+                "endpoint": request.endpoint or "unknown",
+                "route": request.url_rule.rule if request.url_rule else "unknown",
                 "status_code": 405,
             },
         )
@@ -228,6 +246,8 @@ def create_app():
                 "request_id": getattr(g, "request_id", ""),
                 "method": request.method,
                 "path": request.path,
+                "endpoint": request.endpoint or "unknown",
+                "route": request.url_rule.rule if request.url_rule else "unknown",
                 "status_code": 500,
             },
         )

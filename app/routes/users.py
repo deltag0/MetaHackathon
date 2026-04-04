@@ -37,6 +37,7 @@ def get_users_list():
             "invalid_pagination_parameters",
             extra={
                 "component": "users",
+                "endpoint": "users.get_users_list",
                 "param": "page_or_per_page",
                 "value": request.args.get("page") or request.args.get("per_page"),
             },
@@ -68,7 +69,7 @@ def load_users_csv():
     except FileNotFoundError:
         current_app.logger.error(
             "file_not_found",
-            extra={"component": "users", "resource": filepath},
+            extra={"component": "users", "endpoint": "users.load_users_csv", "resource": filepath},
         )
         return jsonify(error=filename + " not found"), 404
 

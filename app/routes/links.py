@@ -23,7 +23,7 @@ def _valid_url(url: str) -> bool:
     except Exception:
         current_app.logger.warning(
             "invalid_url_format",
-            extra={"component": "links", "param": "url", "value": url},
+            extra={"component": "links", "endpoint": "links._valid_url", "param": "url", "value": url},
         )
         return False
 
@@ -41,7 +41,7 @@ def _log_event(url_id, user_id, event_type, details):
     except Exception:
         current_app.logger.error(
             "event_logging_failed",
-            extra={"component": "links", "value": str(details)},
+            extra={"component": "links", "endpoint": "links._log_event", "value": str(details)},
         )
 
 
@@ -104,6 +104,7 @@ def list_links():
             "invalid_pagination_parameters",
             extra={
                 "component": "links",
+                "endpoint": "links.list_links",
                 "param": "page_or_per_page",
                 "value": request.args.get("page") or request.args.get("per_page"),
             },
@@ -189,7 +190,7 @@ def update_link(code):
         except Exception:
             current_app.logger.error(
                 "cache_delete_failed",
-                extra={"component": "cache", "short_code": code},
+                extra={"component": "cache", "endpoint": "links.update_link", "short_code": code},
             )
 
     _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
@@ -220,7 +221,7 @@ def delete_link(code):
         except Exception:
             current_app.logger.error(
                 "cache_delete_failed",
-                extra={"component": "cache", "short_code": code},
+                extra={"component": "cache", "endpoint": "links.delete_link", "short_code": code},
             )
 
     _log_event(url.id, None, "deleted", {"short_code": code})

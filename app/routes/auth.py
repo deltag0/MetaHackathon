@@ -48,7 +48,7 @@ def register():
 
     current_app.logger.info(
         "user_registered",
-        extra={"component": "auth", "user_id": user.id, "value": email},
+        extra={"component": "auth", "endpoint": "auth.register", "user_id": user.id, "value": email},
     )
 
     return jsonify(
