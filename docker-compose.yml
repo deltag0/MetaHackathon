@@ -16,6 +16,8 @@ services:
 
   node-exporter:
     image: prom/node-exporter:latest
+    command:
+      - --no-collector.kernel_hung
     ports:
       - 9100:9100
 
