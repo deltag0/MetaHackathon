@@ -23,7 +23,10 @@ def create_app():
     init_cache()
 
     db.connect(reuse_if_open=True)
-    db.create_tables([User, URL, Event], safe=True)
+    try:
+        db.create_tables([User, URL, Event], safe=True)
+    except Exception:
+        pass  # Tables already created by another instance
     db.close()
 
     register_routes(app)
