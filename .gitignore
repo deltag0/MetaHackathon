@@ -12,12 +12,14 @@ build/
 
 # Environment variables
 .env
+.env.example
 
 # uv
 uv.lock
 
 # Claude Code
 .claude/
+Claude.md
 
 # IDE
 .vscode/
