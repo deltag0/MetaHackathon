@@ -44,14 +44,20 @@ def list_events():
         try:
             query = query.where(Event.url == int(url_id))
         except (ValueError, TypeError):
-            current_app.logger.warning("Invalid url_id filter: %s", url_id)
+            current_app.logger.warning(
+                "invalid_filter",
+                extra={"component": "events", "param": "url_id", "value": str(url_id)},
+            )
             return jsonify(error="url_id must be an integer"), 400
 
     if user_id is not None:
         try:
             query = query.where(Event.user == int(user_id))
         except (ValueError, TypeError):
-            current_app.logger.warning("Invalid user_id filter: %s", user_id)
+            current_app.logger.warning(
+                "invalid_filter",
+                extra={"component": "events", "param": "user_id", "value": str(user_id)},
+            )
             return jsonify(error="user_id must be an integer"), 400
 
     if event_type is not None:
@@ -60,7 +66,10 @@ def list_events():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
-        current_app.logger.warning("Invalid limit parameter: %s", request.args.get("limit"))
+        current_app.logger.warning(
+            "invalid_limit_parameter",
+            extra={"component": "events", "param": "limit", "value": str(request.args.get("limit"))},
+        )
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -79,7 +88,10 @@ def load_events_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        current_app.logger.error("File not found: %s", filepath)
+        current_app.logger.error(
+            "file_not_found",
+            extra={"component": "events", "resource": filepath},
+        )
         return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "url_id", "user_id", "event_type", "timestamp", "details"}
@@ -91,7 +103,10 @@ def load_events_csv():
             try:
                 entry["details"] = json.loads(entry["details"])
             except (ValueError, TypeError):
-                current_app.logger.warning("Invalid details format in row: %s", row)
+                current_app.logger.warning(
+                    "invalid_event_details_format",
+                    extra={"component": "events", "value": str(row)},
+                )
                 entry["details"] = None
         entry.setdefault("timestamp", now)
         cleaned.append(entry)

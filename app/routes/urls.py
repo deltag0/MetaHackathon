@@ -28,7 +28,10 @@ def _log_event(url_id, user_id, event_type, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
-        current_app.logger.error("Error occurred while logging event: %s", details)
+        current_app.logger.error(
+            "event_logging_failed",
+            extra={"component": "urls", "value": str(details)},
+        )
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -64,7 +67,10 @@ def list_urls():
         try:
             query = query.where(URL.user == int(user_id))
         except (ValueError, TypeError):
-            current_app.logger.warning("Invalid user_id parameter: %s", user_id)
+            current_app.logger.warning(
+                "invalid_user_id_parameter",
+                extra={"component": "urls", "param": "user_id", "value": str(user_id)},
+            )
             return jsonify(error="user_id must be an integer"), 400
 
     if is_active_str is not None:
@@ -73,7 +79,10 @@ def list_urls():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
-        current_app.logger.warning("Invalid limit parameter: %s", request.args.get("limit"))
+        current_app.logger.warning(
+            "invalid_limit_parameter",
+            extra={"component": "urls", "param": "limit", "value": str(request.args.get("limit"))},
+        )
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -92,7 +101,10 @@ def load_urls_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        current_app.logger.error("File not found: %s", filepath)
+        current_app.logger.error(
+            "file_not_found",
+            extra={"component": "urls", "resource": filepath},
+        )
         return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "user_id", "short_code", "original_url", "title", "is_active", "created_at", "updated_at"}

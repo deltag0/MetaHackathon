@@ -23,7 +23,10 @@ def _log_click(url_id, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
-        current_app.logger.error("Error occurred while logging click event: %s", details)
+        current_app.logger.error(
+            "click_event_logging_failed",
+            extra={"component": "redirect", "value": str(details)},
+        )
         pass
 
 
@@ -38,9 +41,22 @@ def follow(code):
         try:
             cached_url = cache.get("url:" + code)
             if cached_url:
+                url = URL.get_or_none(URL.short_code == code)
+                if not url or not url.is_active:
+                    cache.delete(f"url:{code}")
+                    return jsonify(error="Short link not found"), 404
+                details = {
+                    "ip": request.remote_addr,
+                    "user_agent": request.headers.get("User-Agent", ""),
+                    "referer": request.headers.get("Referer", ""),
+                }
+                _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
-            current_app.logger.error("Error occurred while fetching cached URL: %s", code)
+            current_app.logger.error(
+                "cache_fetch_failed",
+                extra={"component": "cache", "short_code": code},
+            )
 
     url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
@@ -50,7 +66,10 @@ def follow(code):
         try:
             cache.set("url:" + code, url.original_url, ex=CACHE_TTL)
         except Exception:
-            current_app.logger.error("Error occurred while setting cache for URL: %s", code)
+            current_app.logger.error(
+                "cache_set_failed",
+                extra={"component": "cache", "short_code": code},
+            )
 
     details = {
         "ip": request.remote_addr,

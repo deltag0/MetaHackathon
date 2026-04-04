@@ -21,7 +21,10 @@ def _valid_url(url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:
-        current_app.logger.warning("Invalid URL format: %s", url)
+        current_app.logger.warning(
+            "invalid_url_format",
+            extra={"component": "links", "param": "url", "value": url},
+        )
         return False
 
 
@@ -36,7 +39,10 @@ def _log_event(url_id, user_id, event_type, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
-        current_app.logger.error("Error occurred while logging event: %s", details)
+        current_app.logger.error(
+            "event_logging_failed",
+            extra={"component": "links", "value": str(details)},
+        )
 
 
 @links_bp.route("/shorten", methods=["POST"])
@@ -94,7 +100,14 @@ def list_links():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
-        current_app.logger.warning("Invalid page or per_page parameter: %s", request.args.get("page") or request.args.get("per_page"))
+        current_app.logger.warning(
+            "invalid_pagination_parameters",
+            extra={
+                "component": "links",
+                "param": "page_or_per_page",
+                "value": request.args.get("page") or request.args.get("per_page"),
+            },
+        )
         return jsonify(error="page and per_page must be integers"), 400
 
     query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
@@ -174,7 +187,10 @@ def update_link(code):
         try:
             cache.delete("url:" + code)
         except Exception:
-            current_app.logger.error("Error occurred while deleting cache for URL: %s", code)
+            current_app.logger.error(
+                "cache_delete_failed",
+                extra={"component": "cache", "short_code": code},
+            )
 
     _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
 
@@ -202,7 +218,10 @@ def delete_link(code):
         try:
             cache.delete("url:" + code)
         except Exception:
-            current_app.logger.error("Error occurred while deleting cache for URL: %s", code)
+            current_app.logger.error(
+                "cache_delete_failed",
+                extra={"component": "cache", "short_code": code},
+            )
 
     _log_event(url.id, None, "deleted", {"short_code": code})
 
