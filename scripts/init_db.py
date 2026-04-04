@@ -27,7 +27,7 @@ def create_tables():
     print("  users, urls, events tables ready.")
 
 
-def seed_users(filepath="users.csv"):
+def seed_users(filepath="app/data/users.csv"):
     print(f"Seeding users from {filepath}...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -40,7 +40,7 @@ def seed_users(filepath="users.csv"):
     print(f"  {len(rows)} users seeded.")
 
 
-def seed_urls(filepath="urls.csv"):
+def seed_urls(filepath="app/data/urls.csv"):
     print(f"Seeding URLs from {filepath}...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -58,7 +58,7 @@ def seed_urls(filepath="urls.csv"):
     print(f"  {len(rows)} URLs seeded.")
 
 
-def seed_events(filepath="events.csv"):
+def seed_events(filepath="app/data/events.csv"):
     print(f"Seeding events from {filepath}...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))

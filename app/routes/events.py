@@ -69,7 +69,7 @@ def list_events():
 @events_bp.route("/bulk", methods=["POST"])
 def load_events_csv():
     data = request.get_json(silent=True) or {}
-    filename = data.get("file", "events.csv")
+    filename = data.get("file", "app/data/events.csv")
 
     filepath = os.path.join(_PROJECT_ROOT, filename)
     try:

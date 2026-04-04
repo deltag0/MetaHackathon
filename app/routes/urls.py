@@ -84,7 +84,7 @@ def list_urls():
 @urls_bp.route("/bulk", methods=["POST"])
 def load_urls_csv():
     data = request.get_json(silent=True) or {}
-    filename = data.get("file", "urls.csv")
+    filename = data.get("file", "app/data/urls.csv")
 
     filepath = os.path.join(_PROJECT_ROOT, filename)
     try:
