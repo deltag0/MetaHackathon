@@ -27,7 +27,7 @@ def test_get_urls_by_user(client):
     _create_url(client, "https://user1.example.com", user_id=uid)
     _create_url(client, "https://user2.example.com", user_id=uid)
     _create_url(client, "https://other.example.com", user_id=None)
-    r = client.get(f"/urls?user_id={uid}")
+    r = client.get("/urls?user_id=" + str(uid))
     assert r.status_code == 200
     data = r.get_json()
     assert len(data) == 2
@@ -37,7 +37,7 @@ def test_get_urls_by_user(client):
 def test_get_active_urls(client):
     _create_url(client, "https://active1.example.com")
     uid = _create_url(client, "https://todeactivate.example.com").get_json()["id"]
-    client.put(f"/urls/{uid}", json={"is_active": False})
+    client.put("/urls/" + str(uid), json={"is_active": False})
     r = client.get("/urls?is_active=true")
     assert r.status_code == 200
     data = r.get_json()
@@ -46,7 +46,7 @@ def test_get_active_urls(client):
 
 def test_get_inactive_urls(client):
     uid = _create_url(client, "https://inactive.example.com").get_json()["id"]
-    client.put(f"/urls/{uid}", json={"is_active": False})
+    client.put("/urls/" + str(uid), json={"is_active": False})
     r = client.get("/urls?is_active=false")
     assert r.status_code == 200
     data = r.get_json()
@@ -80,7 +80,7 @@ def test_create_url_generates_unique_short_codes(client):
 
 def test_get_url_by_id(client):
     url_id = _create_url(client, "https://byid.example.com").get_json()["id"]
-    r = client.get(f"/urls/{url_id}")
+    r = client.get("/urls/" + str(url_id))
     assert r.status_code == 200
     assert r.get_json()["id"] == url_id
 
@@ -94,14 +94,14 @@ def test_get_nonexistent_url(client):
 
 def test_update_url_title(client):
     url_id = _create_url(client, "https://updatetitle.example.com", title="Old").get_json()["id"]
-    r = client.put(f"/urls/{url_id}", json={"title": "Updated Title"})
+    r = client.put("/urls/" + str(url_id), json={"title": "Updated Title"})
     assert r.status_code == 200
     assert r.get_json()["title"] == "Updated Title"
 
 
 def test_deactivate_url(client):
     url_id = _create_url(client, "https://deactivate.example.com").get_json()["id"]
-    r = client.put(f"/urls/{url_id}", json={"is_active": False})
+    r = client.put("/urls/" + str(url_id), json={"is_active": False})
     assert r.status_code == 200
     assert r.get_json()["is_active"] is False
 
@@ -115,14 +115,14 @@ def test_update_nonexistent_url(client):
 
 def test_delete_url(client):
     url_id = _create_url(client, "https://delete.example.com").get_json()["id"]
-    r = client.delete(f"/urls/{url_id}")
+    r = client.delete("/urls/" + str(url_id))
     assert r.status_code == 200
 
 
 def test_delete_url_removes_from_db(client):
     url_id = _create_url(client, "https://gone.example.com").get_json()["id"]
-    client.delete(f"/urls/{url_id}")
-    assert client.get(f"/urls/{url_id}").status_code == 404
+    client.delete("/urls/" + str(url_id))
+    assert client.get("/urls/" + str(url_id)).status_code == 404
 
 
 def test_delete_nonexistent_url(client):
@@ -134,6 +134,6 @@ def test_delete_nonexistent_url(client):
 
 def test_redirect_via_short_code(client):
     short_code = _create_url(client, "https://redirect.example.com").get_json()["short_code"]
-    r = client.get(f"/{short_code}", follow_redirects=False)
+    r = client.get("/" + short_code, follow_redirects=False)
     assert r.status_code == 302
     assert r.headers["Location"] == "https://redirect.example.com"

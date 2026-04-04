@@ -1,0 +1,35 @@
+process_names:
+  - name: "backend-flask"
+    comm:
+      - 'python'
+    cmdline:
+      - '.*run\.py.*'
+
+  - name: "frontend"
+    comm:
+      - 'next-server (v'
+      - 'next-server'
+
+  - name: "database-postgres"
+    cmdline:
+      - '.*postgres.*'
+
+  - name: "otel-collector"
+    cmdline:
+      - '.*otelcol.*'
+
+  - name: "prometheus"
+    cmdline:
+      - '.*prometheus.*'
+
+  - name: "grafana"
+    cmdline:
+      - '.*grafana.*'
+
+  - name: "loki"
+    comm:
+      - 'loki'
+
+  - name: "promtail"
+    comm:
+      - 'promtail'

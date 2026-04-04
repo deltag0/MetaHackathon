@@ -1,0 +1,101 @@
+{
+  "uid": "meta-observability-overview",
+  "title": "Meta Observability Overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+"panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Node CPU Busy %",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])))"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Named Process Groups",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "namedprocess_namegroup_num_procs"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Process Memory RSS (bytes)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "namedprocess_namegroup_memory_bytes{memtype=\"resident\"}",
+          "legendFormat": "{{groupname}} - RSS"
+        },
+        {
+          "refId": "B",
+          "expr": "namedprocess_namegroup_memory_bytes{memtype=\"swapped\"}",
+          "legendFormat": "{{groupname}} - Swap"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Process Disk I/O (bytes/sec)",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(namedprocess_namegroup_read_bytes_total[5m])",
+          "legendFormat": "{{groupname}} - Read"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(namedprocess_namegroup_write_bytes_total[5m])",
+          "legendFormat": "{{groupname}} - Write"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Process Thread Count",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "namedprocess_namegroup_num_threads",
+          "legendFormat": "{{groupname}}"
+        }
+      ]
+    }
+  ]
+}

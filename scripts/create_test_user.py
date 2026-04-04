@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
         existing = User.get_or_none(User.email == email)
         if existing:
-            print(f"Test user already exists: {email}")
+            print("Test user already exists: " + email)
         else:
             User.create(
                 email=email,
@@ -41,5 +41,5 @@ if __name__ == "__main__":
             )
             print("Test user created:")
 
-        print(f"  Email:    {email}")
-        print(f"  Password: {password}")
+        print("  Email:    " + email)
+        print("  Password: " + password)

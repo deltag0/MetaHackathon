@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime
 
 import base62
-from flask import Blueprint, jsonify, redirect, request
+from flask import Blueprint, redirect, current_app, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -29,7 +29,10 @@ def _log_event(url_id, user_id, event_type, details):
         )
         cache_delete_pattern("events:list:*")
     except Exception:
-        pass
+        current_app.logger.error(
+            "event_logging_failed",
+            extra={"component": "urls", "endpoint": "urls._log_event", "value": str(details)},
+        )
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -54,7 +57,7 @@ def list_urls():
     user_id = request.args.get("user_id")
     is_active_str = request.args.get("is_active")
 
-    cache_key = f"urls:list:{user_id}:{is_active_str}"
+    cache_key = "urls:list:" + str(user_id) + ":" + str(is_active_str)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -65,6 +68,10 @@ def list_urls():
         try:
             query = query.where(URL.user == int(user_id))
         except (ValueError, TypeError):
+            current_app.logger.warning(
+                "invalid_user_id_parameter",
+                extra={"component": "urls", "endpoint": "urls.list_urls", "param": "user_id", "value": str(user_id)},
+            )
             return jsonify(error="user_id must be an integer"), 400
 
     if is_active_str is not None:
@@ -73,6 +80,10 @@ def list_urls():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            "invalid_limit_parameter",
+            extra={"component": "urls", "endpoint": "urls.list_urls", "param": "limit", "value": str(request.args.get("limit"))},
+        )
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -91,7 +102,11 @@ def load_urls_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        return jsonify(error=f"{filename} not found"), 404
+        current_app.logger.error(
+            "file_not_found",
+            extra={"component": "urls", "endpoint": "urls.load_urls_csv", "resource": filepath},
+        )
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "user_id", "short_code", "original_url", "title", "is_active", "created_at", "updated_at"}
     now = str(datetime.utcnow())
@@ -160,7 +175,7 @@ def redirect_by_short_code(short_code):
 
 @urls_bp.route("/<int:url_id>", methods=["GET"])
 def get_url(url_id):
-    cache_key = f"urls:{url_id}"
+    cache_key = "urls:" + str(url_id)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -189,7 +204,7 @@ def update_url(url_id):
     url.updated_at = datetime.utcnow()
     url.save()
 
-    cache_delete(f"urls:{url_id}")
+    cache_delete("urls:" + str(url_id))
     cache_delete_pattern("urls:list:*")
     return jsonify(_url_dict(url))
 
@@ -203,7 +218,7 @@ def delete_url(url_id):
     # Delete dependent events first (FK constraint)
     Event.delete().where(Event.url == url_id).execute()
     url.delete_instance()
-    cache_delete(f"urls:{url_id}")
+    cache_delete("urls:" + str(url_id))
     cache_delete_pattern("urls:list:*")
     cache_delete_pattern("events:list:*")
     return jsonify(message="deleted"), 200
