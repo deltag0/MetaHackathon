@@ -44,14 +44,14 @@ def list_events():
         try:
             query = query.where(Event.url == int(url_id))
         except (ValueError, TypeError):
-            current_app.logger.warning(f"Invalid url_id filter: {url_id}")
+            current_app.logger.warning("Invalid url_id filter: %s", url_id)
             return jsonify(error="url_id must be an integer"), 400
 
     if user_id is not None:
         try:
             query = query.where(Event.user == int(user_id))
         except (ValueError, TypeError):
-            current_app.logger.warning(f"Invalid user_id filter: {user_id}")
+            current_app.logger.warning("Invalid user_id filter: %s", user_id)
             return jsonify(error="user_id must be an integer"), 400
 
     if event_type is not None:
@@ -60,7 +60,7 @@ def list_events():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
-        current_app.logger.warning(f"Invalid limit parameter: {request.args.get('limit')}")
+        current_app.logger.warning("Invalid limit parameter: %s", request.args.get("limit"))
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -79,7 +79,7 @@ def load_events_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        current_app.logger.error(f"File not found: {filepath}")
+        current_app.logger.error("File not found: %s", filepath)
         return jsonify(error=f"{filename} not found"), 404
 
     allowed = {"id", "url_id", "user_id", "event_type", "timestamp", "details"}
@@ -91,7 +91,7 @@ def load_events_csv():
             try:
                 entry["details"] = json.loads(entry["details"])
             except (ValueError, TypeError):
-                current_app.logger.warning(f"Invalid details format in row: {row}")
+                current_app.logger.warning("Invalid details format in row: %s", row)
                 entry["details"] = None
         entry.setdefault("timestamp", now)
         cleaned.append(entry)

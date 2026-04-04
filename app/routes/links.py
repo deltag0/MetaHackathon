@@ -21,7 +21,7 @@ def _valid_url(url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:
-        current_app.logger.warning(f"Invalid URL format: {url}")
+        current_app.logger.warning("Invalid URL format: %s", url)
         return False
 
 
@@ -35,7 +35,7 @@ def _log_event(url_id, user_id, event_type, details):
             details=details,
         )
     except Exception:
-        current_app.logger.error(f"Error occurred while logging event: {details}")
+        current_app.logger.error("Error occurred while logging event: %s", details)
 
 
 @links_bp.route("/shorten", methods=["POST"])
@@ -93,9 +93,7 @@ def list_links():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
-        current_app.logger.warning(
-            f"Invalid page or per_page parameter: {request.args.get('page') or request.args.get('per_page')}"
-        )
+        current_app.logger.warning("Invalid page or per_page parameter: %s", request.args.get("page") or request.args.get("per_page"))
         return jsonify(error="page and per_page must be integers"), 400
 
     query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
@@ -203,7 +201,7 @@ def delete_link(code):
         try:
             cache.delete(f"url:{code}")
         except Exception:
-            current_app.logger.error(f"Error occurred while deleting cache for URL: {code}")
+            current_app.logger.error("Error occurred while deleting cache for URL: %s", code)
 
     _log_event(url.id, None, "deleted", {"short_code": code})
 

@@ -34,7 +34,8 @@ def get_users_list():
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
         current_app.logger.warning(
-            f"Invalid page or per_page parameter: {request.args.get('page') or request.args.get('per_page')}"
+            "Invalid page or per_page parameter: %s",
+            request.args.get("page") or request.args.get("per_page"),
         )
         return jsonify(error="page and per_page must be integers"), 400
 
@@ -61,7 +62,7 @@ def load_users_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
-        current_app.logger.error(f"File not found: {filepath}")
+        current_app.logger.error("File not found: %s", filepath)
         return jsonify(error=f"{filename} not found"), 404
 
     allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}

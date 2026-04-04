@@ -22,7 +22,7 @@ def _log_click(url_id, details):
             details=details,
         )
     except Exception:
-        current_app.logger.error(f"Error occurred while logging click event: {details}")
+        current_app.logger.error("Error occurred while logging click event: %s", details)
         pass
 
 
@@ -49,7 +49,7 @@ def follow(code):
                 _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
-            current_app.logger.error(f"Error occurred while fetching cached URL: {code}")
+            current_app.logger.error("Error occurred while fetching cached URL: %s", code)
 
     url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
@@ -58,8 +58,7 @@ def follow(code):
     if cache:
         try:
             cache.set(f"url:{code}", url.original_url, ex=CACHE_TTL)
-        except Exception:
-            current_app.logger.error(f"Error occurred while setting cache for URL: {code}")
+        except Exception: current_app.logger.error("Error occurred while setting cache for URL: %s", code)
 
     details = {
         "ip": request.remote_addr,
