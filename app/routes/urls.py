@@ -32,7 +32,7 @@ def _url_dict(u):
 
 
 @urls_bp.route("", methods=["GET"])
-def list_urls():
+def get_urls_list():
     query = URL.select().order_by(URL.id)
 
     user_id = request.args.get("user_id")
@@ -50,7 +50,7 @@ def list_urls():
 
 
 @urls_bp.route("/bulk", methods=["POST"])
-def bulk_urls():
+def load_urls_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "urls.csv")
 
@@ -110,7 +110,7 @@ def create_url():
 
 
 @urls_bp.route("/<int:url_id>", methods=["GET"])
-def get_url(url_id):
+def get_url_by_id(url_id):
     url = URL.get_or_none(URL.id == url_id)
     if not url:
         return jsonify(error="not found"), 404

@@ -23,7 +23,7 @@ def _user_dict(u):
 
 
 @users_bp.route("", methods=["GET"])
-def list_users():
+def get_users_list():
     try:
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
@@ -37,7 +37,7 @@ def list_users():
 
 
 @users_bp.route("/bulk", methods=["POST"])
-def bulk_users():
+def load_users_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "users.csv")
 
@@ -68,7 +68,7 @@ def bulk_users():
 
 
 @users_bp.route("/<int:user_id>", methods=["GET"])
-def get_user(user_id):
+def get_user_by_id(user_id):
     user = User.get_or_none(User.id == user_id)
     if not user:
         return jsonify(error="not found"), 404

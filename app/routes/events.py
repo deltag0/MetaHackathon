@@ -25,7 +25,7 @@ def _event_dict(e):
 
 
 @events_bp.route("", methods=["GET"])
-def list_events():
+def get_events_list():
     query = Event.select().order_by(Event.id)
 
     url_id = request.args.get("url_id")
@@ -50,7 +50,7 @@ def list_events():
 
 
 @events_bp.route("/bulk", methods=["POST"])
-def bulk_events():
+def load_events_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "events.csv")
 
