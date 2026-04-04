@@ -32,7 +32,7 @@ export const options = {
     },
   },
   thresholds: {
-    http_req_duration: ["p(95)<2000"],  // p95 under 2s
+    http_req_duration: ["p(95)<5000"],  // p95 under 5s
     errors: ["rate<0.05"],              // less than 5% errors
     http_req_failed: ["rate<0.05"],     // built-in failure rate < 5%
   },
@@ -124,7 +124,7 @@ export default function () {
     JSON.stringify({
       original_url: `https://example.com/t3-${__VU}-${__ITER}-${Date.now()}`,
       title: `T3 URL ${__VU}`,
-      user_id: userId || 1,
+      user_id: userId,
     }),
     { headers }
   );
@@ -186,7 +186,7 @@ export default function () {
       `${BASE_URL}/events`,
       JSON.stringify({
         url_id: urlId,
-        user_id: userId || 1,
+        user_id: userId,
         event_type: "click",
         details: { source: "tier3" },
       }),

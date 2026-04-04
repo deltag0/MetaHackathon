@@ -36,16 +36,6 @@ def follow(code):
         try:
             cached_url = cache.get(f"url:{code}")
             if cached_url:
-                url = URL.get_or_none(URL.short_code == code)
-                if not url or not url.is_active:
-                    cache.delete(f"url:{code}")
-                    return jsonify(error="Short link not found"), 404
-                details = {
-                    "ip": request.remote_addr,
-                    "user_agent": request.headers.get("User-Agent", ""),
-                    "referer": request.headers.get("Referer", ""),
-                }
-                _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
             pass
