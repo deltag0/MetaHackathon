@@ -6,6 +6,9 @@ from flask_cors import CORS
 
 from app.database import init_db, db
 from app.cache import init_cache
+from app.models.user import User
+from app.models.url import URL
+from app.models.event import Event
 from app.routes import register_routes
 
 
@@ -19,7 +22,9 @@ def create_app():
     init_db(app)
     init_cache()
 
-    from app import models  # noqa: F401 - registers models with Peewee
+    db.connect(reuse_if_open=True)
+    db.create_tables([User, URL, Event], safe=True)
+    db.close()
 
     register_routes(app)
 
