@@ -1,8 +1,9 @@
 process_names:
-  - name: "server-python"
+  - name: "backend-flask"
+    comm:
+      - 'python'
     cmdline:
-      - '.*python(3(\.\d+)?)?.*(run\.py|gunicorn|flask).*'
-      - '.*uv\s+run\s+run\.py.*'
+      - '.*run\.py.*'
 
   - name: "frontend"
     comm:
@@ -24,3 +25,11 @@ process_names:
   - name: "grafana"
     cmdline:
       - '.*grafana.*'
+
+  - name: "loki"
+    comm:
+      - 'loki'
+
+  - name: "promtail"
+    comm:
+      - 'promtail'

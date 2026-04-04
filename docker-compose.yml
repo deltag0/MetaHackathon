@@ -29,6 +29,9 @@ services:
     ports:
       - "5000:5000"
     environment:
+      FLASK_DEBUG: "false"
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: "5000"
       DATABASE_NAME: hackathon_db
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
@@ -41,6 +44,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     restart: always
 
   frontend:
@@ -83,10 +91,31 @@ services:
       - 8889:8889
       - 4318:4318
 
+  loki:
+    image: grafana/loki:3.0.0
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-data:/tmp
+
   grafana:
     image: grafana/grafana:latest
     depends_on:
       - prometheus
+      - loki
     ports:
       - "3001:3000"
     environment:
@@ -101,3 +130,5 @@ services:
 volumes:
   grafana-data:
   postgres_data:
+  loki-data:
+  promtail-data:
