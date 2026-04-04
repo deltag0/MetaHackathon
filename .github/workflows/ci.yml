@@ -8,10 +8,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,10 +51,10 @@ jobs:
           --health-retries=5
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5
