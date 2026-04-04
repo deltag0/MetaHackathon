@@ -46,7 +46,7 @@ def register():
         created_at=datetime.utcnow(),
     )
 
-    current_app.logger.info("Registered user %s", email)
+    current_app.logger.info(f"Registered user {email}")
 
     return jsonify(
         session_token=_make_session_token(user.id),

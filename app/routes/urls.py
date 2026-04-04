@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime
 
 import base62
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -27,7 +27,7 @@ def _log_event(url_id, user_id, event_type, details):
             details=details,
         )
     except Exception:
-        pass
+        current_app.logger.error(f"Error occurred while logging event: {details}")
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -63,6 +63,7 @@ def list_urls():
         try:
             query = query.where(URL.user == int(user_id))
         except (ValueError, TypeError):
+            current_app.logger.warning(f"Invalid user_id parameter: {user_id}")
             return jsonify(error="user_id must be an integer"), 400
 
     if is_active_str is not None:
@@ -71,6 +72,7 @@ def list_urls():
     try:
         limit = int(request.args.get("limit", 100))
     except (ValueError, TypeError):
+        current_app.logger.warning(f"Invalid limit parameter: {request.args.get('limit')}")
         limit = 100
     query = query.limit(min(limit, 500))
 
@@ -89,6 +91,7 @@ def load_urls_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
+        current_app.logger.error(f"File not found: {filepath}")
         return jsonify(error=f"{filename} not found"), 404
 
     allowed = {"id", "user_id", "short_code", "original_url", "title", "is_active", "created_at", "updated_at"}

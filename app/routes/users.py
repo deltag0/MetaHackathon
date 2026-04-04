@@ -2,7 +2,7 @@ import csv
 import os
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -10,7 +10,9 @@ from app.models.event import Event
 from app.models.url import URL
 from app.models.user import User
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -31,6 +33,9 @@ def get_users_list():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            f"Invalid page or per_page parameter: {request.args.get('page') or request.args.get('per_page')}"
+        )
         return jsonify(error="page and per_page must be integers"), 400
 
     cache_key = f"users:list:{page}:{per_page}"
@@ -56,6 +61,7 @@ def load_users_csv():
         with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
+        current_app.logger.error(f"File not found: {filepath}")
         return jsonify(error=f"{filename} not found"), 404
 
     allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}
@@ -70,7 +76,7 @@ def load_users_csv():
 
     with db.atomic():
         for i in range(0, len(cleaned), 100):
-            User.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
+            User.insert_many(cleaned[i : i + 100]).on_conflict_ignore().execute()
 
     db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));")
 

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, jsonify, redirect, request
+from flask import Blueprint, current_app, jsonify, redirect, request
 
 from app.cache import get_cache
 from app.models.event import Event
@@ -22,6 +22,7 @@ def _log_click(url_id, details):
             details=details,
         )
     except Exception:
+        current_app.logger.error(f"Error occurred while logging click event: {details}")
         pass
 
 
@@ -48,7 +49,7 @@ def follow(code):
                 _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
-            pass
+            current_app.logger.error(f"Error occurred while fetching cached URL: {code}")
 
     url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
@@ -58,7 +59,7 @@ def follow(code):
         try:
             cache.set(f"url:{code}", url.original_url, ex=CACHE_TTL)
         except Exception:
-            pass
+            current_app.logger.error(f"Error occurred while setting cache for URL: {code}")
 
     details = {
         "ip": request.remote_addr,

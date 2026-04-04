@@ -3,7 +3,7 @@ import logging
 import time
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, g, request
+from flask import Flask, current_app, jsonify, g, request
 from flask_cors import CORS
 
 from app.database import init_db, db, check_db_connection
@@ -48,6 +48,7 @@ def create_app():
     try:
         db.create_tables([User, URL, Event], safe=True)
     except Exception:
+        current_app.logger.warning(f"Error creating tables, they might already exist")
         pass  # Tables already created by another instance
     db.close()
 
@@ -76,6 +77,7 @@ def create_app():
             check_db_connection()
             db_status = "ok"
         except Exception as e:
+            current_app.logger.error(f"Database connection error: {e}")
             db_status = str(e)
 
         from app.cache import get_cache
@@ -85,6 +87,7 @@ def create_app():
                 cache.ping()
             cache_status = "ok"
         except Exception as e:
+            current_app.logger.error(f"Cache connection error: {e}")
             cache_status = str(e)
 
         return db_status, cache_status
@@ -118,17 +121,17 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found(e):
-        app.logger.warning("404 %s", request.path)
+        app.logger.warning(f"404 {request.path}")
         return jsonify(error="not found"), 404
 
     @app.errorhandler(405)
     def method_not_allowed(e):
-        app.logger.warning("405 %s %s", request.method, request.path)
+        app.logger.warning(f"405 {request.method} {request.path}")
         return jsonify(error="method not allowed"), 405
 
     @app.errorhandler(500)
     def internal_error(e):
-        app.logger.exception("500 %s", request.path)
+        app.logger.exception(f"500 {request.path}")
         return jsonify(error="internal server error"), 500
 
     return app

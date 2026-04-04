@@ -3,7 +3,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import base62
-from flask import Blueprint, jsonify, request
+from flask import current_app, Blueprint, jsonify, request
 
 from app.cache import get_cache
 from app.models.event import Event
@@ -21,6 +21,7 @@ def _valid_url(url: str) -> bool:
         parsed = urlparse(url)
         return parsed.scheme in ("http", "https") and bool(parsed.netloc)
     except Exception:
+        current_app.logger.warning(f"Invalid URL format: {url}")
         return False
 
 
@@ -34,7 +35,7 @@ def _log_event(url_id, user_id, event_type, details):
             details=details,
         )
     except Exception:
-        pass
+        current_app.logger.error(f"Error occurred while logging event: {details}")
 
 
 @links_bp.route("/shorten", methods=["POST"])
@@ -92,6 +93,9 @@ def list_links():
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
+        current_app.logger.warning(
+            f"Invalid page or per_page parameter: {request.args.get('page') or request.args.get('per_page')}"
+        )
         return jsonify(error="page and per_page must be integers"), 400
 
     query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
@@ -171,7 +175,7 @@ def update_link(code):
         try:
             cache.delete(f"url:{code}")
         except Exception:
-            pass
+            current_app.logger.error(f"Error occurred while deleting cache for URL: {code}")
 
     _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
 
@@ -199,8 +203,7 @@ def delete_link(code):
         try:
             cache.delete(f"url:{code}")
         except Exception:
-
-            pass
+            current_app.logger.error(f"Error occurred while deleting cache for URL: {code}")
 
     _log_event(url.id, None, "deleted", {"short_code": code})
 
