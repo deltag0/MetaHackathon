@@ -1,4 +1,3 @@
-import threading
 from datetime import datetime
 
 from flask import Blueprint, jsonify, redirect, request
@@ -13,7 +12,7 @@ CACHE_TTL = 3600  # 1 hour
 
 
 def _log_click(url_id, details):
-    """Fire-and-forget click event — runs in background thread."""
+    """Record a click event for a short link in the background."""
     try:
         Event.create(
             url_id=url_id,
@@ -23,15 +22,15 @@ def _log_click(url_id, details):
             details=details,
         )
     except Exception:
-        pass  # Never let analytics crash a redirect
+        pass
 
 
 @redirect_bp.route("/<string:code>")
 def follow(code):
+    """Redirect to the original URL, falling back to DB if cache misses."""
     if code.endswith("+"):
         return stats(code[:-1])
 
-    # Cache-aside: check Redis first
     cache = get_cache()
     if cache:
         try:
@@ -44,19 +43,15 @@ def follow(code):
                 }
                 url = URL.get_or_none(URL.short_code == code)
                 if url:
-                    threading.Thread(target=_log_click, args=(url.id, details), daemon=True).start()
+                    _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
-            pass  # Redis unavailable — fall through to DB
+            pass
 
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 
-    if not url.is_active:
-        return jsonify(error="Short link is inactive"), 404
-
-    # Populate cache
     if cache:
         try:
             cache.set(f"url:{code}", url.original_url, ex=CACHE_TTL)
@@ -68,14 +63,15 @@ def follow(code):
         "user_agent": request.headers.get("User-Agent", ""),
         "referer": request.headers.get("Referer", ""),
     }
-    threading.Thread(target=_log_click, args=(url.id, details), daemon=True).start()
+    _log_click(url.id, details)
 
     return redirect(url.original_url, code=302)
 
 
 @redirect_bp.route("/<string:code>+")
 def stats(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    """Return basic stats for the given short code."""
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 
