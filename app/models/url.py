@@ -15,3 +15,11 @@ class Url(BaseModel):
 
     class Meta:
         table_name = "urls"
+
+class User(BaseModel):
+    id = AutoField()
+    username = TextField()
+    email = TextField()
+    created_at = DateTimeField()
+    
+    
