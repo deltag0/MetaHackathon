@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, redirect, request
 
-from app.cache import get_cache
+from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
 from app.models.url import URL
 
@@ -21,6 +21,7 @@ def _log_click(url_id, details):
             timestamp=datetime.utcnow(),
             details=details,
         )
+        cache_delete_pattern("events:list:*")
     except Exception:
         current_app.logger.error("Error occurred while logging click event: %s", details)
         pass
@@ -37,16 +38,6 @@ def follow(code):
         try:
             cached_url = cache.get("url:" + code)
             if cached_url:
-                url = URL.get_or_none(URL.short_code == code)
-                if not url or not url.is_active:
-                    cache.delete("url:" + code)
-                    return jsonify(error="Short link not found"), 404
-                details = {
-                    "ip": request.remote_addr,
-                    "user_agent": request.headers.get("User-Agent", ""),
-                    "referer": request.headers.get("Referer", ""),
-                }
-                _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
             current_app.logger.error("Error occurred while fetching cached URL: %s", code)

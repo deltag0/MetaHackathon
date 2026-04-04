@@ -26,6 +26,7 @@ def _log_event(url_id, user_id, event_type, details):
             timestamp=datetime.utcnow(),
             details=details,
         )
+        cache_delete_pattern("events:list:*")
     except Exception:
         current_app.logger.error("Error occurred while logging event: %s", details)
 
@@ -143,6 +144,7 @@ def create_url():
         updated_at=now,
     )
     cache_delete_pattern("urls:list:*")
+    cache_set(f"url:{short_code}", original_url, ttl=3600)
     _log_event(url.id, user_id, "created", {})
     return jsonify(_url_dict(url)), 201
 

@@ -110,13 +110,25 @@ def create_event():
     data = request.get_json(silent=True) or {}
     url_id = data.get("url_id")
     user_id = data.get("user_id")
-    event_type = data.get("event_type", "").strip()
+    event_type = data.get("event_type", "")
+    if isinstance(event_type, str):
+        event_type = event_type.strip()
     details = data.get("details")
 
-    if not url_id:
+    if url_id is None:
         return jsonify(error="url_id is required"), 400
+    try:
+        url_id = int(url_id)
+    except (ValueError, TypeError):
+        return jsonify(error="url_id must be an integer"), 400
     if not event_type:
         return jsonify(error="event_type is required"), 400
+
+    if user_id is not None:
+        try:
+            user_id = int(user_id)
+        except (ValueError, TypeError):
+            return jsonify(error="user_id must be an integer"), 400
 
     url = URL.get_or_none(URL.id == url_id)
     if not url:

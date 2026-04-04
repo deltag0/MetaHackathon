@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import base62
 from flask import current_app, Blueprint, jsonify, request
 
-from app.cache import get_cache
+from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
 from app.models.url import URL
 
@@ -34,6 +34,7 @@ def _log_event(url_id, user_id, event_type, details):
             timestamp=datetime.utcnow(),
             details=details,
         )
+        cache_delete_pattern("events:list:*")
     except Exception:
         current_app.logger.error("Error occurred while logging event: %s", details)
 
