@@ -95,7 +95,10 @@ def get_user(user_id):
 @users_bp.route("", methods=["POST"])
 def create_user():
     data = request.get_json(silent=True) or {}
-    email = data.get("email", "").strip()
+    raw_email = data.get("email", "")
+    if not isinstance(raw_email, str):
+        return jsonify(error="email must be a string"), 400
+    email = raw_email.strip()
     username = data.get("username", "").strip() or None
 
     if not email:
@@ -124,7 +127,11 @@ def update_user(user_id):
 
     data = request.get_json(silent=True) or {}
     if "email" in data:
-        user.email = data["email"]
+        new_email = data["email"]
+        existing = User.get_or_none(User.email == new_email)
+        if existing and existing.id != user_id:
+            return jsonify(error="email already exists"), 409
+        user.email = new_email
     if "username" in data:
         user.username = data["username"]
     user.updated_at = datetime.utcnow()
