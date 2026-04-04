@@ -49,7 +49,7 @@ def follow(code):
         except Exception:
             pass  # Redis unavailable — fall through to DB
 
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active.is_true())
     if not url:
         return jsonify(error="Short link not found"), 404
 
@@ -75,7 +75,7 @@ def follow(code):
 
 @redirect_bp.route("/<string:code>+")
 def stats(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active.is_true())
     if not url:
         return jsonify(error="Short link not found"), 404
 

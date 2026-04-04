@@ -5,21 +5,18 @@ Run with: uv run scripts/init_db.py
 import csv
 import json
 import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from dotenv import load_dotenv
-load_dotenv()
+from flask import Flask
 
 from app.database import db, init_db
-from app.models.user import User
-from app.models.url import URL
 from app.models.event import Event
-from flask import Flask
+from app.models.url import URL
+from app.models.user import User
 
 
 def create_app():
+    load_dotenv()
     app = Flask(__name__)
     init_db(app)
     return app

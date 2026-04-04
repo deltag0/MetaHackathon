@@ -50,7 +50,7 @@ def shorten():
         return jsonify(error="url must start with http:// or https://"), 400
 
     # Dedup: return existing code if URL already active
-    existing = URL.get_or_none(URL.original_url == original_url, URL.is_active == True)
+    existing = URL.get_or_none(URL.original_url == original_url, URL.is_active.is_true())
     if existing:
         return jsonify(
             short_code=existing.short_code,
@@ -94,7 +94,7 @@ def list_links():
     except (ValueError, TypeError):
         return jsonify(error="page and per_page must be integers"), 400
 
-    query = URL.select().where(URL.is_active == True).order_by(URL.created_at.desc())
+    query = URL.select().where(URL.is_active.is_true()).order_by(URL.created_at.desc())
     total = query.count()
     urls = query.paginate(page, per_page)
 
@@ -116,7 +116,7 @@ def list_links():
 
 @links_bp.route("/api/links/<string:code>", methods=["GET"])
 def link_stats(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active.is_true())
     if not url:
         return jsonify(error="Short link not found"), 404
 
@@ -145,7 +145,7 @@ def link_stats(code):
 
 @links_bp.route("/api/links/<string:code>", methods=["PUT"])
 def update_link(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active.is_true())
     if not url:
         return jsonify(error="Short link not found"), 404
 
@@ -187,7 +187,7 @@ def update_link(code):
 
 @links_bp.route("/api/links/<string:code>", methods=["DELETE"])
 def delete_link(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == True)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active.is_true())
     if not url:
         return jsonify(error="Short link not found"), 404
 
