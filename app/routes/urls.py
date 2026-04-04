@@ -163,5 +163,6 @@ def delete_url(url_id):
         return jsonify(error="not found"), 404
 
     _log_event(url.id, None, "deleted", {"short_code": url.short_code})
+    Event.delete().where(Event.url == url.id).execute()
     url.delete_instance()
     return jsonify(message="deleted"), 200

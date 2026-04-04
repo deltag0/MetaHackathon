@@ -8,6 +8,7 @@ from flask import Blueprint, jsonify, request
 from app.database import db
 from app.models.event import Event
 from app.models.url import URL
+from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -102,6 +103,9 @@ def create_event():
         return jsonify(error="url not found"), 404
     if not url.is_active:
         return jsonify(error="url is inactive"), 400
+
+    if user_id is not None and not User.get_or_none(User.id == user_id):
+        return jsonify(error="user not found"), 404
 
     if details is not None and not isinstance(details, dict):
         return jsonify(error="details must be a JSON object"), 400
