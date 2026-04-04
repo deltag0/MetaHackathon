@@ -4,7 +4,10 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
+from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
+from app.models.event import Event
+from app.models.url import URL
 from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,10 +31,17 @@ def list_users():
     except (ValueError, TypeError):
         return jsonify(error="page and per_page must be integers"), 400
 
+    cache_key = f"users:list:{page}:{per_page}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     query = User.select().order_by(User.id)
     users = query.paginate(page, per_page)
+    result = [_user_dict(u) for u in users]
+    cache_set(cache_key, result)
 
-    return jsonify([_user_dict(u) for u in users])
+    return jsonify(result)
 
 
 @users_bp.route("/bulk", methods=["POST"])
@@ -64,10 +74,17 @@ def bulk_users():
 
 @users_bp.route("/<int:user_id>", methods=["GET"])
 def get_user(user_id):
+    cache_key = f"users:{user_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     user = User.get_or_none(User.id == user_id)
     if not user:
         return jsonify(error="not found"), 404
-    return jsonify(_user_dict(user))
+    result = _user_dict(user)
+    cache_set(cache_key, result)
+    return jsonify(result)
 
 
 @users_bp.route("", methods=["POST"])
@@ -86,6 +103,7 @@ def create_user():
         password_hash=data.get("password_hash", ""),
         created_at=datetime.utcnow(),
     )
+    cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user)), 201
 
 
@@ -100,6 +118,8 @@ def update_user(user_id):
         user.email = data["email"]
     user.save()
 
+    cache_delete(f"users:{user_id}")
+    cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user))
 
 
@@ -109,5 +129,12 @@ def delete_user(user_id):
     if not user:
         return jsonify(error="not found"), 404
 
+    # Delete dependent events and URLs first (FK constraints)
+    Event.delete().where(Event.user == user_id).execute()
+    URL.delete().where(URL.user == user_id).execute()
     user.delete_instance()
+    cache_delete(f"users:{user_id}")
+    cache_delete_pattern("users:list:*")
+    cache_delete_pattern("urls:list:*")
+    cache_delete_pattern("events:list:*")
     return jsonify(message="deleted"), 200

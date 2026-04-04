@@ -5,6 +5,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
+from app.cache import cache_get, cache_set, cache_delete_pattern
 from app.database import db
 from app.models.event import Event
 
@@ -26,27 +27,41 @@ def _event_dict(e):
 
 @events_bp.route("", methods=["GET"])
 def list_events():
+    url_id = request.args.get("url_id")
+    user_id = request.args.get("user_id")
+    event_type = request.args.get("event_type")
+
+    cache_key = f"events:list:{url_id}:{user_id}:{event_type}"
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
     query = Event.select().order_by(Event.id)
 
-    url_id = request.args.get("url_id")
     if url_id is not None:
         try:
             query = query.where(Event.url == int(url_id))
         except (ValueError, TypeError):
             return jsonify(error="url_id must be an integer"), 400
 
-    user_id = request.args.get("user_id")
     if user_id is not None:
         try:
             query = query.where(Event.user == int(user_id))
         except (ValueError, TypeError):
             return jsonify(error="user_id must be an integer"), 400
 
-    event_type = request.args.get("event_type")
     if event_type is not None:
         query = query.where(Event.event_type == event_type)
 
-    return jsonify([_event_dict(e) for e in query])
+    try:
+        limit = int(request.args.get("limit", 100))
+    except (ValueError, TypeError):
+        limit = 100
+    query = query.limit(min(limit, 500))
+
+    result = [_event_dict(e) for e in query]
+    cache_set(cache_key, result, ttl=60)
+    return jsonify(result)
 
 
 @events_bp.route("/bulk", methods=["POST"])
@@ -101,4 +116,16 @@ def create_event():
         timestamp=datetime.utcnow(),
         details=details,
     )
+    cache_delete_pattern("events:list:*")
     return jsonify(_event_dict(event)), 201
+
+
+@events_bp.route("/<int:event_id>", methods=["DELETE"])
+def delete_event(event_id):
+    event = Event.get_or_none(Event.id == event_id)
+    if not event:
+        return jsonify(error="not found"), 404
+
+    event.delete_instance()
+    cache_delete_pattern("events:list:*")
+    return jsonify(message="deleted"), 200
