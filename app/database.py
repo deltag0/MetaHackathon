@@ -31,3 +31,7 @@ def init_db(app):
     def _db_close(exc):
         if not db.is_closed():
             db.close()
+
+
+def check_db_connection():
+    db.execute_sql("SELECT 1")
