@@ -2,7 +2,6 @@ import threading
 from datetime import datetime
 
 from flask import Blueprint, jsonify, redirect, request
-from peewee import SQL
 
 from app.cache import get_cache
 from app.models.event import Event
@@ -14,7 +13,7 @@ CACHE_TTL = 3600  # 1 hour
 
 
 def _log_click(url_id, details):
-    """Fire-and-forget click event — runs in background thread."""
+    """Record a click event for a short link in the background."""
     try:
         Event.create(
             url_id=url_id,
@@ -24,15 +23,15 @@ def _log_click(url_id, details):
             details=details,
         )
     except Exception:
-        pass  # Never let analytics crash a redirect
+        pass
 
 
 @redirect_bp.route("/<string:code>")
 def follow(code):
+    """Redirect to the original URL, falling back to DB if cache misses."""
     if code.endswith("+"):
         return stats(code[:-1])
 
-    # Cache-aside: check Redis first
     cache = get_cache()
     if cache:
         try:
@@ -48,16 +47,12 @@ def follow(code):
                     threading.Thread(target=_log_click, args=(url.id, details), daemon=True).start()
                 return redirect(cached_url, code=302)
         except Exception:
-            pass  # Redis unavailable — fall through to DB
+            pass
 
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == SQL("TRUE"))
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 
-    if not url.is_active:
-        return jsonify(error="Short link is inactive"), 404
-
-    # Populate cache
     if cache:
         try:
             cache.set(f"url:{code}", url.original_url, ex=CACHE_TTL)
@@ -76,7 +71,8 @@ def follow(code):
 
 @redirect_bp.route("/<string:code>+")
 def stats(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == SQL("TRUE"))
+    """Return basic stats for the given short code."""
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 

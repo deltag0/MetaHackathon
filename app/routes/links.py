@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 
 import base62
 from flask import Blueprint, jsonify, request
-from peewee import SQL
 
 from app.cache import get_cache
 from app.models.event import Event
@@ -41,6 +40,7 @@ def _log_event(url_id, user_id, event_type, details):
 
 @links_bp.route("/shorten", methods=["POST"])
 def shorten():
+    """Create a short link for the given URL, or return the existing one."""
     data = request.get_json(silent=True) or {}
     original_url = data.get("url", "").strip()
     title = data.get("title", "").strip() or None
@@ -50,8 +50,7 @@ def shorten():
     if not _valid_url(original_url):
         return jsonify(error="url must start with http:// or https://"), 400
 
-    # Dedup: return existing code if URL already active
-    existing = URL.get_or_none(URL.original_url == original_url, URL.is_active == SQL("TRUE"))
+    existing = URL.get_or_none(URL.original_url == original_url, URL.is_active)
     if existing:
         return jsonify(
             short_code=existing.short_code,
@@ -89,13 +88,14 @@ def shorten():
 
 @links_bp.route("/api/links", methods=["GET"])
 def list_links():
+    """Return a paginated list of active short links."""
     try:
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
     except (ValueError, TypeError):
         return jsonify(error="page and per_page must be integers"), 400
 
-    query = URL.select().where(URL.is_active == SQL("TRUE")).order_by(URL.created_at.desc())
+    query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
     total = query.count()
     urls = query.paginate(page, per_page)
 
@@ -117,7 +117,8 @@ def list_links():
 
 @links_bp.route("/api/links/<string:code>", methods=["GET"])
 def link_stats(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == SQL("TRUE"))
+    """Return stats and recent events for a single short link."""
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 
@@ -146,7 +147,8 @@ def link_stats(code):
 
 @links_bp.route("/api/links/<string:code>", methods=["PUT"])
 def update_link(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == SQL("TRUE"))
+    """Update the URL or title of an existing short link."""
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 
@@ -188,7 +190,8 @@ def update_link(code):
 
 @links_bp.route("/api/links/<string:code>", methods=["DELETE"])
 def delete_link(code):
-    url = URL.get_or_none(URL.short_code == code, URL.is_active == SQL("TRUE"))
+    """Soft-delete a short link by marking it inactive."""
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
         return jsonify(error="Short link not found"), 404
 

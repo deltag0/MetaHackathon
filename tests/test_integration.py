@@ -1,9 +1,8 @@
-"""Integration tests — Flask test client + real DB."""
+# Integration tests
+from unittest.mock import MagicMock, patch
 
+from app.models.url import URL
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def shorten(client, url, title=None):
     payload = {"url": url}
@@ -20,9 +19,7 @@ def login(client, email="test@example.com", password="password123"):
     return client.post("/api/auth/login", json={"email": email, "password": password})
 
 
-# ---------------------------------------------------------------------------
 # POST /shorten — bad input
-# ---------------------------------------------------------------------------
 
 def test_shorten_missing_url(client):
     r = client.post("/shorten", json={})
@@ -55,9 +52,7 @@ def test_shorten_javascript_scheme(client):
     assert r.status_code == 400
 
 
-# ---------------------------------------------------------------------------
 # POST /shorten — happy path
-# ---------------------------------------------------------------------------
 
 def test_shorten_creates_link(client):
     r = shorten(client, "https://example.com")
@@ -74,9 +69,7 @@ def test_shorten_with_title(client):
     assert r.get_json()["title"] == "My Link"
 
 
-# ---------------------------------------------------------------------------
-# POST /shorten — uniqueness / dedup
-# ---------------------------------------------------------------------------
+# POST /shorten — dedup
 
 def test_shorten_dedup_same_url_returns_same_code(client):
     r1 = shorten(client, "https://dedup.example.com")
@@ -97,9 +90,7 @@ def test_shorten_deleted_url_gets_new_code(client):
     assert r2.get_json()["short_code"] != code
 
 
-# ---------------------------------------------------------------------------
 # GET /<code> — redirect
-# ---------------------------------------------------------------------------
 
 def test_redirect_valid(client):
     code = shorten(client, "https://redirect.example.com").get_json()["short_code"]
@@ -129,9 +120,7 @@ def test_redirect_deleted_link(client):
     assert r.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # GET /<code>+ — stats
-# ---------------------------------------------------------------------------
 
 def test_stats_valid(client):
     code = shorten(client, "https://stats.example.com").get_json()["short_code"]
@@ -154,9 +143,7 @@ def test_stats_deleted(client):
     assert r.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # GET /api/links
-# ---------------------------------------------------------------------------
 
 def test_list_links_returns_active(client):
     shorten(client, "https://list1.example.com")
@@ -188,9 +175,7 @@ def test_list_links_invalid_page(client):
     assert r.status_code == 400
 
 
-# ---------------------------------------------------------------------------
 # GET /api/links/<code>
-# ---------------------------------------------------------------------------
 
 def test_link_stats_valid(client):
     code = shorten(client, "https://detail.example.com").get_json()["short_code"]
@@ -214,9 +199,7 @@ def test_link_stats_deleted(client):
     assert r.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # PUT /api/links/<code>
-# ---------------------------------------------------------------------------
 
 def test_update_link(client):
     code = shorten(client, "https://old.example.com").get_json()["short_code"]
@@ -250,9 +233,7 @@ def test_update_link_deleted(client):
     assert r.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # DELETE /api/links/<code>
-# ---------------------------------------------------------------------------
 
 def test_delete_link(client):
     code = shorten(client, "https://todel.example.com").get_json()["short_code"]
@@ -273,9 +254,7 @@ def test_delete_link_already_deleted(client):
     assert r.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # POST /api/auth/register
-# ---------------------------------------------------------------------------
 
 def test_register_success(client):
     r = register(client, "new@example.com")
@@ -312,9 +291,7 @@ def test_register_short_password(client):
     assert r.status_code == 400
 
 
-# ---------------------------------------------------------------------------
 # POST /api/auth/login
-# ---------------------------------------------------------------------------
 
 def test_login_success(client):
     register(client, "login@example.com", "password123")
@@ -339,9 +316,7 @@ def test_login_missing_fields(client):
     assert r.status_code == 400
 
 
-# ---------------------------------------------------------------------------
 # Global error handlers
-# ---------------------------------------------------------------------------
 
 def test_404_returns_json(client):
     r = client.get("/this-route-does-not-exist-at-all")
@@ -355,3 +330,132 @@ def test_405_returns_json(client):
     assert r.status_code == 405
     assert r.content_type == "application/json"
     assert "error" in r.get_json()
+
+
+def test_404_handler_fires_on_multi_segment_path(client):
+    r = client.get("/this/path/does/not/exist")
+    assert r.status_code == 404
+    assert r.get_json()["error"] == "not found"
+
+
+def test_500_handler_body(app, client):
+    @app.route("/test-500-trigger")
+    def _trigger_500():
+        raise RuntimeError("intentional test error")
+
+    r = client.get("/test-500-trigger")
+    assert r.status_code == 500
+    assert r.get_json()["error"] == "internal server error"
+
+
+# Health: DB and cache failure paths
+
+def test_health_ready_db_failure_returns_503(client):
+    with patch("app.database.db.execute_sql", side_effect=Exception("connection refused")):
+        r = client.get("/health/ready")
+    assert r.status_code == 503
+    data = r.get_json()
+    assert data["status"] == "degraded"
+    assert "connection refused" in data["db"]
+
+
+def test_health_db_failure_returns_503(client):
+    with patch("app.database.db.execute_sql", side_effect=Exception("db error")):
+        r = client.get("/health")
+    assert r.status_code == 503
+    assert r.get_json()["status"] == "degraded"
+
+
+def test_health_ready_cache_ping_failure(client):
+    mock_cache = MagicMock()
+    mock_cache.ping.side_effect = Exception("redis down")
+    with patch("app.cache.get_cache", return_value=mock_cache):
+        r = client.get("/health/ready")
+    assert r.status_code == 200
+    assert "redis down" in r.get_json()["cache"]
+
+
+# Redirect: stats route and cache exception paths
+
+def test_redirect_plus_only_code_routes_to_stats(client):
+    r = client.get("/+")
+    assert r.status_code == 404
+    assert r.get_json()["error"] == "Short link not found"
+
+
+def test_redirect_cache_get_exception_falls_through_to_db(client):
+    shorten(client, "https://example.com/cache-get-exc")
+    url_obj = URL.get_or_none(URL.original_url == "https://example.com/cache-get-exc")
+    mock_cache = MagicMock()
+    mock_cache.get.side_effect = Exception("redis error")
+    with patch("app.routes.redirect.get_cache", return_value=mock_cache):
+        r = client.get(f"/{url_obj.short_code}")
+    assert r.status_code == 302
+
+
+def test_redirect_cache_set_exception_still_redirects(client):
+    shorten(client, "https://example.com/cache-set-exc")
+    url_obj = URL.get_or_none(URL.original_url == "https://example.com/cache-set-exc")
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = None
+    mock_cache.set.side_effect = Exception("redis write error")
+    with patch("app.routes.redirect.get_cache", return_value=mock_cache):
+        r = client.get(f"/{url_obj.short_code}")
+    assert r.status_code == 302
+
+
+# Links: urlparse exception, collision retry, title-only update, cache errors
+
+def test_shorten_urlparse_exception_returns_400(client):
+    with patch("app.routes.links.urlparse", side_effect=Exception("parse error")):
+        r = client.post("/shorten", json={"url": "https://example.com"})
+    assert r.status_code == 400
+
+
+def test_shorten_collision_retry(client):
+    URL.create(
+        short_code="aaaaaaa",
+        original_url="https://already-exists.example.com",
+        title=None,
+        is_active=True,
+    )
+    call_count = 0
+
+    def _mock_generate(length=7):
+        nonlocal call_count
+        call_count += 1
+        return "aaaaaaa" if call_count == 1 else "bbbbbbb"
+
+    with patch("app.routes.links._generate_short_code", side_effect=_mock_generate):
+        r = client.post("/shorten", json={"url": "https://new-unique.example.com"})
+
+    assert r.status_code == 201
+    assert r.get_json()["short_code"] == "bbbbbbb"
+    assert call_count >= 2
+
+
+def test_update_link_title_only(client):
+    code = shorten(client, "https://example.com/title-only").get_json()["short_code"]
+    r = client.put(f"/api/links/{code}", json={"title": "New Title Only"})
+    assert r.status_code == 200
+    data = r.get_json()
+    assert data["title"] == "New Title Only"
+    assert data["original_url"] == "https://example.com/title-only"
+
+
+def test_update_cache_delete_exception_still_succeeds(client):
+    code = shorten(client, "https://example.com/update-cache-exc").get_json()["short_code"]
+    mock_cache = MagicMock()
+    mock_cache.delete.side_effect = Exception("redis delete error")
+    with patch("app.routes.links.get_cache", return_value=mock_cache):
+        r = client.put(f"/api/links/{code}", json={"url": "https://example.com/updated"})
+    assert r.status_code == 200
+
+
+def test_delete_cache_delete_exception_still_succeeds(client):
+    code = shorten(client, "https://example.com/delete-cache-exc").get_json()["short_code"]
+    mock_cache = MagicMock()
+    mock_cache.delete.side_effect = Exception("redis delete error")
+    with patch("app.routes.links.get_cache", return_value=mock_cache):
+        r = client.delete(f"/api/links/{code}")
+    assert r.status_code == 200
