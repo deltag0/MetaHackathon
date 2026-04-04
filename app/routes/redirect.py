@@ -1,4 +1,3 @@
-import threading
 from datetime import datetime
 
 from flask import Blueprint, jsonify, redirect, request
@@ -44,7 +43,7 @@ def follow(code):
                 }
                 url = URL.get_or_none(URL.short_code == code)
                 if url:
-                    threading.Thread(target=_log_click, args=(url.id, details), daemon=True).start()
+                    _log_click(url.id, details)
                 return redirect(cached_url, code=302)
         except Exception:
             pass
@@ -64,7 +63,7 @@ def follow(code):
         "user_agent": request.headers.get("User-Agent", ""),
         "referer": request.headers.get("Referer", ""),
     }
-    threading.Thread(target=_log_click, args=(url.id, details), daemon=True).start()
+    _log_click(url.id, details)
 
     return redirect(url.original_url, code=302)
 

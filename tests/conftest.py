@@ -10,6 +10,7 @@ from app.models.user import User
 @pytest.fixture(scope="session")
 def app():
     application = create_app()
+    application.config['PROPAGATE_EXCEPTIONS'] = False
 
     @application.route("/test-500-trigger")
     def _trigger_500():

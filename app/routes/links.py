@@ -1,5 +1,4 @@
 import secrets
-import threading
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -72,11 +71,7 @@ def shorten():
         updated_at=datetime.utcnow(),
     )
 
-    threading.Thread(
-        target=_log_event,
-        args=(url.id, None, "created", {"short_code": short_code, "original_url": original_url}),
-        daemon=True,
-    ).start()
+    _log_event(url.id, None, "created", {"short_code": short_code, "original_url": original_url})
 
     return jsonify(
         short_code=short_code,
@@ -174,11 +169,7 @@ def update_link(code):
         except Exception:
             pass
 
-    threading.Thread(
-        target=_log_event,
-        args=(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url}),
-        daemon=True,
-    ).start()
+    _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
 
     return jsonify(
         short_code=url.short_code,
@@ -206,10 +197,6 @@ def delete_link(code):
         except Exception:
             pass
 
-    threading.Thread(
-        target=_log_event,
-        args=(url.id, None, "deleted", {"short_code": code}),
-        daemon=True,
-    ).start()
+    _log_event(url.id, None, "deleted", {"short_code": code})
 
     return jsonify(message="deleted")
