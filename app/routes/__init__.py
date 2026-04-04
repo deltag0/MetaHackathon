@@ -1,8 +1,8 @@
 def register_routes(app):
-    """Register all route blueprints with the Flask app.
+    from app.routes.redirect import redirect_bp
+    from app.routes.links import links_bp
+    from app.routes.auth import auth_bp
 
-    Add your blueprints here. Example:
-        from app.routes.products import products_bp
-        app.register_blueprint(products_bp)
-    """
-    pass
+    app.register_blueprint(redirect_bp)
+    app.register_blueprint(links_bp)
+    app.register_blueprint(auth_bp)

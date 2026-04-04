@@ -16,6 +16,9 @@ build/
 # uv
 uv.lock
 
+# Claude Code
+.claude/
+
 # IDE
 .vscode/
 .idea/
@@ -32,3 +35,12 @@ Thumbs.db
 
 # Judging (not visible to participants)
 judging/
+
+
+events.csv
+urls.csv
+users.csv
+
+
+plan.md
+

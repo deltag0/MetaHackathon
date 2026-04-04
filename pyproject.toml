@@ -5,7 +5,10 @@ requires-python = ">=3.13"
 dependencies = [
     "faker>=33.0",
     "flask>=3.1",
+    "flask-cors>=6.0.2",
     "peewee>=3.17",
     "psycopg2-binary>=2.9",
+    "pybase62>=1.0",
     "python-dotenv>=1.0",
+    "redis>=5.0",
 ]
