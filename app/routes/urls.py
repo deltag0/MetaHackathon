@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime
 
 import base62
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, redirect, request
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -143,8 +143,19 @@ def create_url():
     )
     cache_delete_pattern("urls:list:*")
     cache_set(f"url:{short_code}", json.dumps({"id": url.id, "original_url": original_url, "is_active": True}), ttl=3600)
-    _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
+    _log_event(url.id, user_id, "created", {})
     return jsonify(_url_dict(url)), 201
+
+
+@urls_bp.route("/<short_code>/redirect", methods=["GET"])
+def redirect_by_short_code(short_code):
+    url = URL.get_or_none(URL.short_code == short_code)
+    if not url:
+        return jsonify(error="not found"), 404
+    if not url.is_active:
+        return jsonify(error="url is inactive"), 410
+    _log_event(url.id, url.user_id, "click", {"short_code": short_code})
+    return redirect(url.original_url, code=302)
 
 
 @urls_bp.route("/<int:url_id>", methods=["GET"])

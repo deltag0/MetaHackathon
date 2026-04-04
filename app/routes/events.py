@@ -61,11 +61,9 @@ def list_events():
         limit = 100
     query = query.limit(min(limit, 500))
 
-    total = query.count()
     result = [_event_dict(e) for e in query]
-    response = {"kind": "list", "sample": result, "total_items": total}
-    cache_set(cache_key, response, ttl=60)
-    return jsonify(response)
+    cache_set(cache_key, result, ttl=60)
+    return jsonify(result)
 
 
 @events_bp.route("/bulk", methods=["POST"])

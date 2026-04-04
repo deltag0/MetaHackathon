@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from flask import Blueprint, jsonify, redirect
+from flask import Blueprint, jsonify, redirect, request
 
 from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
@@ -12,24 +12,33 @@ redirect_bp = Blueprint("redirect", __name__)
 CACHE_TTL = 3600  # 1 hour
 
 
-def _log_click(url):
-    """Record a click event for a short link."""
+def _log_click(url_id, details):
+    """Record a click event for a short link in the background."""
     try:
         Event.create(
-            url_id=url.id,
-            user_id=url.user_id,
+            url_id=url_id,
+            user_id=None,
             event_type="click",
             timestamp=datetime.utcnow(),
-            details={"short_code": url.short_code},
+            details=details,
         )
         cache_delete_pattern("events:list:*")
     except Exception:
         pass
 
 
-@redirect_bp.route("/s/<string:code>")
+@redirect_bp.route("/<string:code>")
 def follow(code):
     """Redirect to the original URL, falling back to DB if cache misses."""
+    if code.endswith("+"):
+        return stats(code[:-1])
+
+    details = {
+        "ip": request.remote_addr,
+        "user_agent": request.headers.get("User-Agent", ""),
+        "referer": request.headers.get("Referer", ""),
+    }
+
     cache = get_cache()
     if cache:
         try:
@@ -37,19 +46,16 @@ def follow(code):
             if cached_raw:
                 cached = json.loads(cached_raw)
                 if not cached.get("is_active"):
-                    return jsonify(error="link is inactive"), 410
-                url = URL.get_or_none(URL.short_code == code)
-                if url:
-                    _log_click(url)
+                    cache.delete(f"url:{code}")
+                    return jsonify(error="Short link not found"), 404
+                _log_click(cached["id"], details)
                 return redirect(cached["original_url"], code=302)
         except Exception:
             pass
 
-    url = URL.get_or_none(URL.short_code == code)
+    url = URL.get_or_none(URL.short_code == code, URL.is_active)
     if not url:
-        return jsonify(error="short code not found"), 404
-    if not url.is_active:
-        return jsonify(error="link is inactive"), 410
+        return jsonify(error="Short link not found"), 404
 
     if cache:
         try:
@@ -57,7 +63,7 @@ def follow(code):
         except Exception:
             pass
 
-    _log_click(url)
+    _log_click(url.id, details)
     return redirect(url.original_url, code=302)
 
 
