@@ -4,7 +4,6 @@ Run with: uv run scripts/init_db.py
 """
 import csv
 import json
-import os
 
 from dotenv import load_dotenv
 from flask import Flask
