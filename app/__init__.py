@@ -3,6 +3,7 @@ import json
 import uuid
 import logging
 import time
+from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -54,23 +55,44 @@ class JsonFormatter(logging.Formatter):
 def _configure_logging(app: Flask) -> None:
     level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
+    log_file_path = os.environ.get("LOG_FILE_PATH", "/app/logs/app.log")
+    log_max_bytes = int(os.environ.get("LOG_FILE_MAX_BYTES", str(10 * 1024 * 1024)))
+    log_backup_count = int(os.environ.get("LOG_FILE_BACKUP_COUNT", "5"))
 
     formatter = JsonFormatter()
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    log_dir = os.path.dirname(log_file_path)
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        log_file_path,
+        maxBytes=log_max_bytes,
+        backupCount=log_backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setFormatter(formatter)
+
+    handlers = [stream_handler, file_handler]
 
     app.logger.handlers.clear()
-    app.logger.addHandler(handler)
+    for handler in handlers:
+        app.logger.addHandler(handler)
     app.logger.setLevel(level)
     app.logger.propagate = False
 
     werkzeug_logger = logging.getLogger("werkzeug")
     werkzeug_logger.handlers.clear()
-    werkzeug_logger.addHandler(handler)
+    for handler in handlers:
+        werkzeug_logger.addHandler(handler)
     werkzeug_logger.setLevel(level)
     werkzeug_logger.propagate = False
 
-    app.logger.info("Logger configured", extra={"log_level": level_name})
+    app.logger.info(
+        "logger_configured",
+        extra={"log_level": level_name, "resource": log_file_path},
+    )
 
 
 def create_app():

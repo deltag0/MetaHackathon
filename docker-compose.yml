@@ -39,6 +39,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-/app/logs/app.log}
+    volumes:
+      - ./logs/app:/app/logs
     depends_on:
       db:
         condition: service_healthy

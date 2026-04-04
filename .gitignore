@@ -42,3 +42,8 @@ judging/
 
 plan.md
 
+# Local runtime logs
+logs/
+!logs/.gitkeep
+!logs/**/.gitkeep
+
