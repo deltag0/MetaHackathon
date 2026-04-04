@@ -2,7 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, redirect, request
 
-from app.cache import get_cache
+from app.cache import get_cache, cache_delete_pattern
 from app.models.event import Event
 from app.models.url import URL
 
@@ -21,6 +21,7 @@ def _log_click(url_id, details):
             timestamp=datetime.utcnow(),
             details=details,
         )
+        cache_delete_pattern("events:list:*")
     except Exception:
         pass
 

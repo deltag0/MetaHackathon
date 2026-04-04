@@ -26,6 +26,7 @@ def _log_event(url_id, user_id, event_type, details):
             timestamp=datetime.utcnow(),
             details=details,
         )
+        cache_delete_pattern("events:list:*")
     except Exception:
         pass
 
