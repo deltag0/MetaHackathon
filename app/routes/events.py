@@ -148,6 +148,14 @@ def create_event():
     return jsonify(_event_dict(event)), 201
 
 
+@events_bp.route("/<int:event_id>", methods=["GET"])
+def get_event(event_id):
+    event = Event.get_or_none(Event.id == event_id)
+    if not event:
+        return jsonify(error="not found"), 404
+    return jsonify(_event_dict(event))
+
+
 @events_bp.route("/<int:event_id>", methods=["DELETE"])
 def delete_event(event_id):
     event = Event.get_or_none(Event.id == event_id)
