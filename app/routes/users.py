@@ -148,8 +148,12 @@ def delete_user(user_id):
     if not user:
         return jsonify(error="not found"), 404
 
-    # Delete dependent events and URLs first (FK constraints)
+    # Delete all events for URLs owned by this user (Event.url FK is NOT NULL)
+    user_url_ids = URL.select(URL.id).where(URL.user == user_id)
+    Event.delete().where(Event.url.in_(user_url_ids)).execute()
+    # Delete events directly linked to this user on other URLs
     Event.delete().where(Event.user == user_id).execute()
+    # Now safe to delete URLs and user
     URL.delete().where(URL.user == user_id).execute()
     user.delete_instance()
     cache_delete(f"users:{user_id}")
