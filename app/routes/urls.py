@@ -140,6 +140,7 @@ def create_url():
         updated_at=now,
     )
     cache_delete_pattern("urls:list:*")
+    _log_event(url.id, user_id, "created", {})
     return jsonify(_url_dict(url)), 201
 
 

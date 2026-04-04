@@ -19,7 +19,9 @@ def _user_dict(u):
     return {
         "id": u.id,
         "email": u.email,
+        "username": u.username,
         "created_at": str(u.created_at),
+        "updated_at": str(u.updated_at),
     }
 
 
@@ -56,13 +58,14 @@ def load_users_csv():
     except FileNotFoundError:
         return jsonify(error=f"{filename} not found"), 404
 
-    allowed = {"id", "email", "password_hash", "created_at"}
+    allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}
     now = str(datetime.utcnow())
     cleaned = []
     for row in rows:
         entry = {k: v for k, v in row.items() if k in allowed}
         entry.setdefault("password_hash", "")
         entry.setdefault("created_at", now)
+        entry.setdefault("updated_at", now)
         cleaned.append(entry)
 
     with db.atomic():
@@ -93,6 +96,7 @@ def get_user(user_id):
 def create_user():
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip()
+    username = data.get("username", "").strip() or None
 
     if not email:
         return jsonify(error="email is required"), 400
@@ -100,10 +104,13 @@ def create_user():
     if User.get_or_none(User.email == email):
         return jsonify(error="email already exists"), 409
 
+    now = datetime.utcnow()
     user = User.create(
         email=email,
+        username=username,
         password_hash=data.get("password_hash", ""),
-        created_at=datetime.utcnow(),
+        created_at=now,
+        updated_at=now,
     )
     cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user)), 201
@@ -118,6 +125,9 @@ def update_user(user_id):
     data = request.get_json(silent=True) or {}
     if "email" in data:
         user.email = data["email"]
+    if "username" in data:
+        user.username = data["username"]
+    user.updated_at = datetime.utcnow()
     user.save()
 
     cache_delete(f"users:{user_id}")
