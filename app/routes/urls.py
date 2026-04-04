@@ -1,10 +1,15 @@
+import csv
+import os
 import secrets
 from datetime import datetime
 
 import base62
 from flask import Blueprint, jsonify, request
 
+from app.database import db
 from app.models.url import URL
+
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 urls_bp = Blueprint("urls", __name__, url_prefix="/urls")
 
@@ -42,6 +47,37 @@ def list_urls():
         query = query.where(URL.is_active == (is_active_str.lower() == "true"))
 
     return jsonify([_url_dict(u) for u in query])
+
+
+@urls_bp.route("/bulk", methods=["POST"])
+def bulk_urls():
+    data = request.get_json(silent=True) or {}
+    filename = data.get("file", "urls.csv")
+
+    filepath = os.path.join(_PROJECT_ROOT, filename)
+    try:
+        with open(filepath, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+    except FileNotFoundError:
+        return jsonify(error=f"{filename} not found"), 404
+
+    allowed = {"id", "user_id", "short_code", "original_url", "title", "is_active", "created_at", "updated_at"}
+    now = str(datetime.utcnow())
+    cleaned = []
+    for row in rows:
+        entry = {k: v for k, v in row.items() if k in allowed}
+        if "is_active" in entry:
+            entry["is_active"] = entry["is_active"].strip().lower() not in ("false", "0", "")
+        entry.setdefault("is_active", True)
+        entry.setdefault("created_at", now)
+        entry.setdefault("updated_at", now)
+        cleaned.append(entry)
+
+    with db.atomic():
+        for i in range(0, len(cleaned), 100):
+            URL.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
+
+    return jsonify(count=len(cleaned)), 201
 
 
 @urls_bp.route("", methods=["POST"])

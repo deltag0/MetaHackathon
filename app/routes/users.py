@@ -1,10 +1,13 @@
 import csv
+import os
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
 from app.database import db
 from app.models.user import User
+
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 
@@ -38,8 +41,9 @@ def bulk_users():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "users.csv")
 
+    filepath = os.path.join(_PROJECT_ROOT, filename)
     try:
-        with open(filename, newline="", encoding="utf-8") as f:
+        with open(filepath, newline="", encoding="utf-8") as f:
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
         return jsonify(error=f"{filename} not found"), 404

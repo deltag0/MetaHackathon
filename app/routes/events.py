@@ -1,8 +1,14 @@
+import csv
+import json
+import os
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
+from app.database import db
 from app.models.event import Event
+
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 events_bp = Blueprint("events", __name__, url_prefix="/events")
 
@@ -41,6 +47,38 @@ def list_events():
         query = query.where(Event.event_type == event_type)
 
     return jsonify([_event_dict(e) for e in query])
+
+
+@events_bp.route("/bulk", methods=["POST"])
+def bulk_events():
+    data = request.get_json(silent=True) or {}
+    filename = data.get("file", "events.csv")
+
+    filepath = os.path.join(_PROJECT_ROOT, filename)
+    try:
+        with open(filepath, newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+    except FileNotFoundError:
+        return jsonify(error=f"{filename} not found"), 404
+
+    allowed = {"id", "url_id", "user_id", "event_type", "timestamp", "details"}
+    now = str(datetime.utcnow())
+    cleaned = []
+    for row in rows:
+        entry = {k: v for k, v in row.items() if k in allowed}
+        if "details" in entry and entry["details"]:
+            try:
+                entry["details"] = json.loads(entry["details"])
+            except (ValueError, TypeError):
+                entry["details"] = None
+        entry.setdefault("timestamp", now)
+        cleaned.append(entry)
+
+    with db.atomic():
+        for i in range(0, len(cleaned), 100):
+            Event.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
+
+    return jsonify(count=len(cleaned)), 201
 
 
 @events_bp.route("", methods=["POST"])
