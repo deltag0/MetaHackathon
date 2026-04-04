@@ -55,7 +55,7 @@ def shorten():
     if existing:
         return jsonify(
             short_code=existing.short_code,
-            short_url=f"{request.host_url}{existing.short_code}",
+            short_url=request.host_url + existing.short_code,
             original_url=existing.original_url,
             title=existing.title,
         )
@@ -80,7 +80,7 @@ def shorten():
 
     return jsonify(
         short_code=short_code,
-        short_url=f"{request.host_url}{short_code}",
+        short_url=request.host_url + short_code,
         original_url=original_url,
         title=title,
     ), 201
@@ -171,9 +171,9 @@ def update_link(code):
     cache = get_cache()
     if cache:
         try:
-            cache.delete(f"url:{code}")
+            cache.delete("url:" + code)
         except Exception:
-            current_app.logger.error(f"Error occurred while deleting cache for URL: {code}")
+            current_app.logger.error("Error occurred while deleting cache for URL: %s", code)
 
     _log_event(url.id, None, "updated", {"old_url": old_url, "new_url": url.original_url})
 
@@ -199,7 +199,7 @@ def delete_link(code):
     cache = get_cache()
     if cache:
         try:
-            cache.delete(f"url:{code}")
+            cache.delete("url:" + code)
         except Exception:
             current_app.logger.error("Error occurred while deleting cache for URL: %s", code)
 

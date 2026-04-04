@@ -83,7 +83,7 @@ def test_shorten_deleted_url_gets_new_code(client):
     r1 = shorten(client, "https://deleted.example.com")
     code = r1.get_json()["short_code"]
 
-    client.delete(f"/api/links/{code}")
+    client.delete("/api/links/" + code)
 
     r2 = shorten(client, "https://deleted.example.com")
     assert r2.status_code == 201
@@ -94,16 +94,16 @@ def test_shorten_deleted_url_gets_new_code(client):
 
 def test_redirect_valid(client):
     code = shorten(client, "https://redirect.example.com").get_json()["short_code"]
-    r = client.get(f"/{code}", follow_redirects=False)
+    r = client.get("/" + code, follow_redirects=False)
     assert r.status_code == 302
     assert r.headers["Location"] == "https://redirect.example.com"
 
 
 def test_redirect_increments_click_count(client):
     code = shorten(client, "https://clicks.example.com").get_json()["short_code"]
-    client.get(f"/{code}", follow_redirects=False)
-    client.get(f"/{code}", follow_redirects=False)
-    r = client.get(f"/api/links/{code}")
+    client.get("/" + code, follow_redirects=False)
+    client.get("/" + code, follow_redirects=False)
+    r = client.get("/api/links/" + code)
     assert r.get_json()["click_count"] == 2
 
 
@@ -115,8 +115,8 @@ def test_redirect_nonexistent(client):
 
 def test_redirect_deleted_link(client):
     code = shorten(client, "https://todelete.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
-    r = client.get(f"/{code}", follow_redirects=False)
+    client.delete("/api/links/" + code)
+    r = client.get("/" + code, follow_redirects=False)
     assert r.status_code == 404
 
 
@@ -124,7 +124,7 @@ def test_redirect_deleted_link(client):
 
 def test_stats_valid(client):
     code = shorten(client, "https://stats.example.com").get_json()["short_code"]
-    r = client.get(f"/{code}+")
+    r = client.get("/" + code + "+")
     assert r.status_code == 200
     data = r.get_json()
     assert data["short_code"] == code
@@ -138,8 +138,8 @@ def test_stats_nonexistent(client):
 
 def test_stats_deleted(client):
     code = shorten(client, "https://statsdel.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
-    r = client.get(f"/{code}+")
+    client.delete("/api/links/" + code)
+    r = client.get("/" + code + "+")
     assert r.status_code == 404
 
 
@@ -156,7 +156,7 @@ def test_list_links_returns_active(client):
 
 def test_list_links_excludes_deleted(client):
     code = shorten(client, "https://listdel.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
+    client.delete("/api/links/" + code)
     r = client.get("/api/links")
     urls = [link["short_code"] for link in r.get_json()["links"]]
     assert code not in urls
@@ -164,7 +164,7 @@ def test_list_links_excludes_deleted(client):
 
 def test_list_links_pagination(client):
     for i in range(5):
-        shorten(client, f"https://page{i}.example.com")
+        shorten(client, "https://page" + str(i) + ".example.com")
     r = client.get("/api/links?page=1&per_page=2")
     assert r.status_code == 200
     assert len(r.get_json()["links"]) <= 2
@@ -179,7 +179,7 @@ def test_list_links_invalid_page(client):
 
 def test_link_stats_valid(client):
     code = shorten(client, "https://detail.example.com").get_json()["short_code"]
-    r = client.get(f"/api/links/{code}")
+    r = client.get("/api/links/" + code)
     assert r.status_code == 200
     data = r.get_json()
     assert data["short_code"] == code
@@ -194,8 +194,8 @@ def test_link_stats_nonexistent(client):
 
 def test_link_stats_deleted(client):
     code = shorten(client, "https://detaildel.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
-    r = client.get(f"/api/links/{code}")
+    client.delete("/api/links/" + code)
+    r = client.get("/api/links/" + code)
     assert r.status_code == 404
 
 
@@ -203,21 +203,21 @@ def test_link_stats_deleted(client):
 
 def test_update_link(client):
     code = shorten(client, "https://old.example.com").get_json()["short_code"]
-    r = client.put(f"/api/links/{code}", json={"url": "https://new.example.com"})
+    r = client.put("/api/links/" + code, json={"url": "https://new.example.com"})
     assert r.status_code == 200
     assert r.get_json()["original_url"] == "https://new.example.com"
 
 
 def test_update_link_reflects_on_redirect(client):
     code = shorten(client, "https://before.example.com").get_json()["short_code"]
-    client.put(f"/api/links/{code}", json={"url": "https://after.example.com"})
-    r = client.get(f"/{code}", follow_redirects=False)
+    client.put("/api/links/" + code, json={"url": "https://after.example.com"})
+    r = client.get("/" + code, follow_redirects=False)
     assert r.headers["Location"] == "https://after.example.com"
 
 
 def test_update_link_invalid_url(client):
     code = shorten(client, "https://updatebad.example.com").get_json()["short_code"]
-    r = client.put(f"/api/links/{code}", json={"url": "not-a-url"})
+    r = client.put("/api/links/" + code, json={"url": "not-a-url"})
     assert r.status_code == 400
 
 
@@ -228,8 +228,8 @@ def test_update_link_nonexistent(client):
 
 def test_update_link_deleted(client):
     code = shorten(client, "https://updatedel.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
-    r = client.put(f"/api/links/{code}", json={"url": "https://example.com"})
+    client.delete("/api/links/" + code)
+    r = client.put("/api/links/" + code, json={"url": "https://example.com"})
     assert r.status_code == 404
 
 
@@ -237,7 +237,7 @@ def test_update_link_deleted(client):
 
 def test_delete_link(client):
     code = shorten(client, "https://todel.example.com").get_json()["short_code"]
-    r = client.delete(f"/api/links/{code}")
+    r = client.delete("/api/links/" + code)
     assert r.status_code == 200
 
 
@@ -249,8 +249,8 @@ def test_delete_link_nonexistent(client):
 
 def test_delete_link_already_deleted(client):
     code = shorten(client, "https://deldel.example.com").get_json()["short_code"]
-    client.delete(f"/api/links/{code}")
-    r = client.delete(f"/api/links/{code}")
+    client.delete("/api/links/" + code)
+    r = client.delete("/api/links/" + code)
     assert r.status_code == 404
 
 
@@ -385,7 +385,7 @@ def test_redirect_cache_get_exception_falls_through_to_db(client):
     mock_cache = MagicMock()
     mock_cache.get.side_effect = Exception("redis error")
     with patch("app.routes.redirect.get_cache", return_value=mock_cache):
-        r = client.get(f"/{url_obj.short_code}")
+        r = client.get("/" + url_obj.short_code)
     assert r.status_code == 302
 
 
@@ -396,7 +396,7 @@ def test_redirect_cache_set_exception_still_redirects(client):
     mock_cache.get.return_value = None
     mock_cache.set.side_effect = Exception("redis write error")
     with patch("app.routes.redirect.get_cache", return_value=mock_cache):
-        r = client.get(f"/{url_obj.short_code}")
+        r = client.get("/" + url_obj.short_code)
     assert r.status_code == 302
 
 
@@ -432,7 +432,7 @@ def test_shorten_collision_retry(client):
 
 def test_update_link_title_only(client):
     code = shorten(client, "https://example.com/title-only").get_json()["short_code"]
-    r = client.put(f"/api/links/{code}", json={"title": "New Title Only"})
+    r = client.put("/api/links/" + code, json={"title": "New Title Only"})
     assert r.status_code == 200
     data = r.get_json()
     assert data["title"] == "New Title Only"
@@ -444,7 +444,7 @@ def test_update_cache_delete_exception_still_succeeds(client):
     mock_cache = MagicMock()
     mock_cache.delete.side_effect = Exception("redis delete error")
     with patch("app.routes.links.get_cache", return_value=mock_cache):
-        r = client.put(f"/api/links/{code}", json={"url": "https://example.com/updated"})
+        r = client.put("/api/links/" + code, json={"url": "https://example.com/updated"})
     assert r.status_code == 200
 
 
@@ -453,5 +453,5 @@ def test_delete_cache_delete_exception_still_succeeds(client):
     mock_cache = MagicMock()
     mock_cache.delete.side_effect = Exception("redis delete error")
     with patch("app.routes.links.get_cache", return_value=mock_cache):
-        r = client.delete(f"/api/links/{code}")
+        r = client.delete("/api/links/" + code)
     assert r.status_code == 200

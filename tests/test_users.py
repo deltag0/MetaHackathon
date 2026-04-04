@@ -21,7 +21,7 @@ def test_get_users_list_returns_created(client):
 
 def test_get_users_pagination(client):
     for i in range(15):
-        _create_user(client, f"page{i}@example.com", f"pageuser{i}")
+        _create_user(client, "page" + str(i) + "@example.com", "pageuser" + str(i))
     r = client.get("/users?page=1&per_page=10")
     assert r.status_code == 200
     assert len(r.get_json()) == 10
@@ -29,7 +29,7 @@ def test_get_users_pagination(client):
 
 def test_get_users_pagination_page2(client):
     for i in range(15):
-        _create_user(client, f"pg2_{i}@example.com", f"pg2user{i}")
+        _create_user(client, "pg2_" + str(i) + "@example.com", "pg2user" + str(i))
     r = client.get("/users?page=2&per_page=10")
     assert r.status_code == 200
     assert len(r.get_json()) == 5
@@ -40,7 +40,7 @@ def test_get_users_pagination_page2(client):
 def test_get_user_by_id(client):
     r = _create_user(client, "byid@example.com", "byiduser")
     user_id = r.get_json()["id"]
-    r2 = client.get(f"/users/{user_id}")
+    r2 = client.get("/users/" + str(user_id))
     assert r2.status_code == 200
     assert r2.get_json()["id"] == user_id
 
@@ -48,7 +48,7 @@ def test_get_user_by_id(client):
 def test_get_user_by_id_returns_fields(client):
     r = _create_user(client, "fields@example.com", "fieldsuser")
     uid = r.get_json()["id"]
-    data = client.get(f"/users/{uid}").get_json()
+    data = client.get("/users/" + str(uid)).get_json()
     assert data["email"] == "fields@example.com"
     assert data["username"] == "fieldsuser"
 
@@ -85,14 +85,14 @@ def test_create_user_duplicate_email(client):
 
 def test_update_user(client):
     uid = _create_user(client, "upd@example.com", "oldname").get_json()["id"]
-    r = client.put(f"/users/{uid}", json={"username": "newname"})
+    r = client.put("/users/" + str(uid), json={"username": "newname"})
     assert r.status_code == 200
     assert r.get_json()["username"] == "newname"
 
 
 def test_update_user_email(client):
     uid = _create_user(client, "oldemail@example.com", "emailuser").get_json()["id"]
-    r = client.put(f"/users/{uid}", json={"email": "newemail@example.com"})
+    r = client.put("/users/" + str(uid), json={"email": "newemail@example.com"})
     assert r.status_code == 200
     assert r.get_json()["email"] == "newemail@example.com"
 
@@ -106,14 +106,14 @@ def test_update_nonexistent_user(client):
 
 def test_delete_user(client):
     uid = _create_user(client, "del@example.com", "deluser").get_json()["id"]
-    r = client.delete(f"/users/{uid}")
+    r = client.delete("/users/" + str(uid))
     assert r.status_code == 200
 
 
 def test_delete_user_removes_from_db(client):
     uid = _create_user(client, "gone@example.com", "goneuser").get_json()["id"]
-    client.delete(f"/users/{uid}")
-    assert client.get(f"/users/{uid}").status_code == 404
+    client.delete("/users/" + str(uid))
+    assert client.get("/users/" + str(uid)).status_code == 404
 
 
 def test_delete_nonexistent_user(client):

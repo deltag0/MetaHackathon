@@ -33,7 +33,7 @@ def list_events():
     user_id = request.args.get("user_id")
     event_type = request.args.get("event_type")
 
-    cache_key = f"events:list:{url_id}:{user_id}:{event_type}"
+    cache_key = "events:list:" + str(url_id) + ":" + str(user_id) + ":" + str(event_type)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -80,7 +80,7 @@ def load_events_csv():
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
         current_app.logger.error("File not found: %s", filepath)
-        return jsonify(error=f"{filename} not found"), 404
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "url_id", "user_id", "event_type", "timestamp", "details"}
     now = str(datetime.utcnow())

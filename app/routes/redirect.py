@@ -35,11 +35,11 @@ def follow(code):
     cache = get_cache()
     if cache:
         try:
-            cached_url = cache.get(f"url:{code}")
+            cached_url = cache.get("url:" + code)
             if cached_url:
                 url = URL.get_or_none(URL.short_code == code)
                 if not url or not url.is_active:
-                    cache.delete(f"url:{code}")
+                    cache.delete("url:" + code)
                     return jsonify(error="Short link not found"), 404
                 details = {
                     "ip": request.remote_addr,
@@ -57,8 +57,9 @@ def follow(code):
 
     if cache:
         try:
-            cache.set(f"url:{code}", url.original_url, ex=CACHE_TTL)
-        except Exception: current_app.logger.error("Error occurred while setting cache for URL: %s", code)
+            cache.set("url:" + code, url.original_url, ex=CACHE_TTL)
+        except Exception:
+            current_app.logger.error("Error occurred while setting cache for URL: %s", code)
 
     details = {
         "ip": request.remote_addr,

@@ -28,7 +28,7 @@ def create_tables():
 
 
 def seed_users(filepath="users.csv"):
-    print(f"Seeding users from {filepath}...")
+    print("Seeding users from " + filepath + "...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
@@ -37,11 +37,11 @@ def seed_users(filepath="users.csv"):
             batch = rows[batch_start:batch_start + 100]
             User.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} users seeded.")
+    print("  " + str(len(rows)) + " users seeded.")
 
 
 def seed_urls(filepath="urls.csv"):
-    print(f"Seeding URLs from {filepath}...")
+    print("Seeding URLs from " + filepath + "...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
@@ -55,11 +55,11 @@ def seed_urls(filepath="urls.csv"):
             batch = rows[batch_start:batch_start + 100]
             URL.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} URLs seeded.")
+    print("  " + str(len(rows)) + " URLs seeded.")
 
 
 def seed_events(filepath="events.csv"):
-    print(f"Seeding events from {filepath}...")
+    print("Seeding events from " + filepath + "...")
     with open(filepath, newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
 
@@ -77,7 +77,7 @@ def seed_events(filepath="events.csv"):
             batch = rows[batch_start:batch_start + 100]
             Event.insert_many(batch).on_conflict_ignore().execute()
 
-    print(f"  {len(rows)} events seeded.")
+    print("  " + str(len(rows)) + " events seeded.")
 
 
 def reset_sequences():

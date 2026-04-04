@@ -39,7 +39,7 @@ def get_users_list():
         )
         return jsonify(error="page and per_page must be integers"), 400
 
-    cache_key = f"users:list:{page}:{per_page}"
+    cache_key = "users:list:" + str(page) + ":" + str(per_page)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -63,7 +63,7 @@ def load_users_csv():
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
         current_app.logger.error("File not found: %s", filepath)
-        return jsonify(error=f"{filename} not found"), 404
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "email", "username", "password_hash", "created_at", "updated_at"}
     now = str(datetime.utcnow())
@@ -86,7 +86,7 @@ def load_users_csv():
 
 @users_bp.route("/<int:user_id>", methods=["GET"])
 def get_user(user_id):
-    cache_key = f"users:{user_id}"
+    cache_key = "users:" + str(user_id)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -137,7 +137,7 @@ def update_user(user_id):
     user.updated_at = datetime.utcnow()
     user.save()
 
-    cache_delete(f"users:{user_id}")
+    cache_delete("users:" + str(user_id))
     cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user))
 
@@ -152,7 +152,7 @@ def delete_user(user_id):
     Event.delete().where(Event.user == user_id).execute()
     URL.delete().where(URL.user == user_id).execute()
     user.delete_instance()
-    cache_delete(f"users:{user_id}")
+    cache_delete("users:" + str(user_id))
     cache_delete_pattern("users:list:*")
     cache_delete_pattern("urls:list:*")
     cache_delete_pattern("events:list:*")

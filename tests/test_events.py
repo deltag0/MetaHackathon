@@ -38,7 +38,7 @@ def test_get_events_by_url(client):
     _create_event(client, url_id1)
     _create_event(client, url_id1)
     _create_event(client, url_id2)
-    r = client.get(f"/events?url_id={url_id1}")
+    r = client.get("/events?url_id=" + str(url_id1))
     assert r.status_code == 200
     data = r.get_json()
     assert len(data) == 3  # 1 auto-logged "created" + 2 manually created
@@ -51,7 +51,7 @@ def test_get_events_by_user(client):
     _create_event(client, url_id, user_id=uid)
     _create_event(client, url_id, user_id=uid)
     _create_event(client, url_id, user_id=None)
-    r = client.get(f"/events?user_id={uid}")
+    r = client.get("/events?user_id=" + str(uid))
     assert r.status_code == 200
     data = r.get_json()
     assert len(data) == 2

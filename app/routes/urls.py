@@ -52,7 +52,7 @@ def list_urls():
     user_id = request.args.get("user_id")
     is_active_str = request.args.get("is_active")
 
-    cache_key = f"urls:list:{user_id}:{is_active_str}"
+    cache_key = "urls:list:" + str(user_id) + ":" + str(is_active_str)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -92,7 +92,7 @@ def load_urls_csv():
             rows = list(csv.DictReader(f))
     except FileNotFoundError:
         current_app.logger.error("File not found: %s", filepath)
-        return jsonify(error=f"{filename} not found"), 404
+        return jsonify(error=filename + " not found"), 404
 
     allowed = {"id", "user_id", "short_code", "original_url", "title", "is_active", "created_at", "updated_at"}
     now = str(datetime.utcnow())
@@ -149,7 +149,7 @@ def create_url():
 
 @urls_bp.route("/<int:url_id>", methods=["GET"])
 def get_url(url_id):
-    cache_key = f"urls:{url_id}"
+    cache_key = "urls:" + str(url_id)
     cached = cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -178,7 +178,7 @@ def update_url(url_id):
     url.updated_at = datetime.utcnow()
     url.save()
 
-    cache_delete(f"urls:{url_id}")
+    cache_delete("urls:" + str(url_id))
     cache_delete_pattern("urls:list:*")
     return jsonify(_url_dict(url))
 
@@ -192,7 +192,7 @@ def delete_url(url_id):
     # Delete dependent events first (FK constraint)
     Event.delete().where(Event.url == url_id).execute()
     url.delete_instance()
-    cache_delete(f"urls:{url_id}")
+    cache_delete("urls:" + str(url_id))
     cache_delete_pattern("urls:list:*")
     cache_delete_pattern("events:list:*")
     return jsonify(message="deleted"), 200
