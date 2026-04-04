@@ -7,8 +7,9 @@ import pybase62
 import secrets
 from datetime import datetime
 
-urls_bp = Blueprint("urls", __name__, url_prefix="/api")
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 
+urls_bp = Blueprint("urls", __name__, url_prefix="/api")
 
 @urls_bp.get("/")
 def get_urls():
@@ -47,36 +48,50 @@ def create_short_url():
         "original_url": data["url"]
     }), 201
 
+@app.get("/verify-login/<token>")
+def verify_login(token):
+    try:
+        email = verify_login_token(token)
+    except SignatureExpired:
+        return jsonify({"error": "Token expired"}), 400
+    except BadSignature:
+        return jsonify({"error": "Invalid token"}), 400
 
-@urls_bp.post("/login")
-def login():
-    data = request.get_json()
-    if not data or "username" not in data or "password" not in data:
-        return jsonify({"error": "Username and password are required"}), 400
-
-    user = User.get_or_none(User.username == data["username"])
-    if not user or not check_password_hash(user.password, data["password"]):
-        return jsonify({"error": "Invalid username or password"}), 401
+    user = get_user_by_email(email)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
 
     login_user(user)
     return jsonify({"message": "Logged in successfully"}), 200
 
-@urls_bp.post("/register")
-def register():
-    data = request.get_json()
-    if not data or "username" not in data or "password" not in data:
-        return jsonify({"error": "Username and password are required"}), 400
+def generate_login_token(email):
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    return s.dumps(email, salt="login-salt")
 
-    user = User.get_or_none(User.username == data["username"])
-    if user:
-        return jsonify({"error": "Username already exists"}), 400
+def verify_login_token(token, max_age=600):
+    s = URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+    return s.loads(token, salt="login-salt", max_age=max_age)
 
-    user = User.create(
-        username=data["username"],
-        password=generate_password_hash(data["password"]),
-        email=data["email"],
-        created_at=datetime.now()
+def send_login_email(user):
+    token = generate_login_token(user.email)
+    login_url = f"{BASE_URL}/verify-login/{token}"
+
+    msg = Message(
+        subject="Your login link",
+        recipients=[user.email],
+        body=f"Click here to log in:\n{login_url}"
     )
+    mail.send(msg)
 
-    return jsonify({"message": "User registered successfully"}), 201
+@urls_bp.post("/login")
+def login():
+    data = request.get_json()
+    if not data or "username" not in data or "email" not in data:
+        return jsonify({"error": "Username and email are required"}), 400
 
+    user = User.get_or_none(User.username == data["username"] & User.email == data["email"])
+    if not user:
+        return jsonify({"error": "Invalid username or email"}), 401
+
+    send_login_email(user)
+    return jsonify({"message": "Logged in successfully"}), 200

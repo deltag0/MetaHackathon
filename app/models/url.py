@@ -21,5 +21,8 @@ class User(BaseModel):
     username = TextField()
     email = TextField()
     created_at = DateTimeField()
+
+    class Meta:
+        table_name = "users"
     
     
