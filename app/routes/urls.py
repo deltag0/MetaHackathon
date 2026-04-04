@@ -10,10 +10,24 @@ from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
 from app.models.event import Event
 from app.models.url import URL
+from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 urls_bp = Blueprint("urls", __name__, url_prefix="/urls")
+
+
+def _log_event(url_id, user_id, event_type, details):
+    try:
+        Event.create(
+            url_id=url_id,
+            user_id=user_id,
+            event_type=event_type,
+            timestamp=datetime.utcnow(),
+            details=details,
+        )
+    except Exception:
+        pass
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -66,7 +80,7 @@ def list_urls():
 
 
 @urls_bp.route("/bulk", methods=["POST"])
-def bulk_urls():
+def load_urls_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "urls.csv")
 
@@ -93,6 +107,8 @@ def bulk_urls():
         for i in range(0, len(cleaned), 100):
             URL.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
 
+    db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls));")
+
     return jsonify(count=len(cleaned)), 201
 
 
@@ -105,6 +121,9 @@ def create_url():
 
     if not original_url:
         return jsonify(error="original_url is required"), 400
+
+    if user_id is not None and not User.get_or_none(User.id == user_id):
+        return jsonify(error="user not found"), 404
 
     short_code = _generate_short_code()
     while URL.select().where(URL.short_code == short_code).exists():

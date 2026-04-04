@@ -41,7 +41,7 @@ def test_get_events_by_url(client):
     r = client.get(f"/events?url_id={url_id1}")
     assert r.status_code == 200
     data = r.get_json()
-    assert len(data) == 2
+    assert len(data) == 3  # 1 auto-logged "created" + 2 manually created
     assert all(e["url_id"] == url_id1 for e in data)
 
 

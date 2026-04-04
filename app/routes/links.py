@@ -43,13 +43,14 @@ def shorten():
     data = request.get_json(silent=True) or {}
     original_url = data.get("url", "").strip()
     title = data.get("title", "").strip() or None
+    user_id = data.get("user_id")
 
     if not original_url:
         return jsonify(error="url is required"), 400
     if not _valid_url(original_url):
         return jsonify(error="url must start with http:// or https://"), 400
 
-    existing = URL.get_or_none(URL.original_url == original_url, URL.is_active)
+    existing = URL.get_or_none(URL.original_url == original_url, URL.user == user_id, URL.is_active)
     if existing:
         return jsonify(
             short_code=existing.short_code,
@@ -67,11 +68,12 @@ def shorten():
         original_url=original_url,
         title=title,
         is_active=True,
+        user_id=user_id,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
 
-    _log_event(url.id, None, "created", {"short_code": short_code, "original_url": original_url})
+    _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
 
     return jsonify(
         short_code=short_code,

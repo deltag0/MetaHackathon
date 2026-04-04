@@ -24,7 +24,7 @@ def _user_dict(u):
 
 
 @users_bp.route("", methods=["GET"])
-def list_users():
+def get_users_list():
     try:
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
@@ -45,7 +45,7 @@ def list_users():
 
 
 @users_bp.route("/bulk", methods=["POST"])
-def bulk_users():
+def load_users_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "users.csv")
 
@@ -68,6 +68,8 @@ def bulk_users():
     with db.atomic():
         for i in range(0, len(cleaned), 100):
             User.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
+
+    db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));")
 
     return jsonify(count=len(cleaned)), 201
 

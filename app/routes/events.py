@@ -8,6 +8,8 @@ from flask import Blueprint, jsonify, request
 from app.cache import cache_get, cache_set, cache_delete_pattern
 from app.database import db
 from app.models.event import Event
+from app.models.url import URL
+from app.models.user import User
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -65,7 +67,7 @@ def list_events():
 
 
 @events_bp.route("/bulk", methods=["POST"])
-def bulk_events():
+def load_events_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "events.csv")
 
@@ -93,6 +95,8 @@ def bulk_events():
         for i in range(0, len(cleaned), 100):
             Event.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
 
+    db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events));")
+
     return jsonify(count=len(cleaned)), 201
 
 
@@ -108,6 +112,18 @@ def create_event():
         return jsonify(error="url_id is required"), 400
     if not event_type:
         return jsonify(error="event_type is required"), 400
+
+    url = URL.get_or_none(URL.id == url_id)
+    if not url:
+        return jsonify(error="url not found"), 404
+    if not url.is_active:
+        return jsonify(error="url is inactive"), 400
+
+    if user_id is not None and not User.get_or_none(User.id == user_id):
+        return jsonify(error="user not found"), 404
+
+    if details is not None and not isinstance(details, dict):
+        return jsonify(error="details must be a JSON object"), 400
 
     event = Event.create(
         url_id=url_id,
