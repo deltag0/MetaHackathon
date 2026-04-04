@@ -28,7 +28,6 @@ def list_users():
         return jsonify(error="page and per_page must be integers"), 400
 
     query = User.select().order_by(User.id)
-    total = query.count()
     users = query.paginate(page, per_page)
 
     return jsonify([_user_dict(u) for u in users])

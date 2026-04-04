@@ -10,6 +10,11 @@ from app.models.user import User
 @pytest.fixture(scope="session")
 def app():
     application = create_app()
+
+    @application.route("/test-500-trigger")
+    def _trigger_500():
+        raise RuntimeError("intentional test error")
+
     with application.app_context():
         db.create_tables([User, URL, Event], safe=True)
         yield application

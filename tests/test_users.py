@@ -1,5 +1,3 @@
-from app.models.user import User
-
 
 def _create_user(client, email="u@example.com", username="testuser"):
     return client.post("/users", json={"email": email, "username": username})

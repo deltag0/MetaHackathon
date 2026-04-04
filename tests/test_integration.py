@@ -338,11 +338,7 @@ def test_404_handler_fires_on_multi_segment_path(client):
     assert r.get_json()["error"] == "not found"
 
 
-def test_500_handler_body(app, client):
-    @app.route("/test-500-trigger")
-    def _trigger_500():
-        raise RuntimeError("intentional test error")
-
+def test_500_handler_body(client):
     r = client.get("/test-500-trigger")
     assert r.status_code == 500
     assert r.get_json()["error"] == "internal server error"
@@ -351,7 +347,7 @@ def test_500_handler_body(app, client):
 # Health: DB and cache failure paths
 
 def test_health_ready_db_failure_returns_503(client):
-    with patch("app.database.db.execute_sql", side_effect=Exception("connection refused")):
+    with patch("app.database.db.execute_sql", create=True, side_effect=Exception("connection refused")):
         r = client.get("/health/ready")
     assert r.status_code == 503
     data = r.get_json()
@@ -360,7 +356,7 @@ def test_health_ready_db_failure_returns_503(client):
 
 
 def test_health_db_failure_returns_503(client):
-    with patch("app.database.db.execute_sql", side_effect=Exception("db error")):
+    with patch("app.database.db.execute_sql", create=True, side_effect=Exception("db error")):
         r = client.get("/health")
     assert r.status_code == 503
     assert r.get_json()["status"] == "degraded"

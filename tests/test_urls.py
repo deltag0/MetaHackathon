@@ -1,6 +1,3 @@
-from app.models.user import User
-from app.models.url import URL
-
 
 def _create_url(client, original_url="https://example.com", title="Test", user_id=None):
     return client.post("/urls", json={"original_url": original_url, "title": title, "user_id": user_id})
