@@ -50,6 +50,7 @@ def shorten():
         return jsonify(error="url must start with http:// or https://"), 400
 
     # Dedup: return existing code if URL already active
+    # ! Should add new entry even if URL exists
     existing = URL.get_or_none(URL.original_url == original_url, URL.is_active == True)
     if existing:
         return jsonify(
@@ -60,6 +61,8 @@ def shorten():
         )
 
     short_code = _generate_short_code()
+
+    # ! should add measure to prevent infinite loop
     while URL.select().where(URL.short_code == short_code).exists():
         short_code = _generate_short_code()
 

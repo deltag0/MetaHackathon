@@ -1,20 +1,26 @@
 process_names:
-  - name: "python"
+  - name: "server-python"
     cmdline:
-      - ".*python.*"
+      - '.*python(3(\.\d+)?)?.*(run\.py|gunicorn|flask).*'
+      - '.*uv\s+run\s+run\.py.*'
 
-  - name: "node"
-    cmdline:
-      - ".*node.*"
+  - name: "frontend"
+    comm:
+      - 'next-server (v'
+      - 'next-server'
 
-  - name: "nginx"
+  - name: "database-postgres"
     cmdline:
-      - ".*nginx.*"
+      - '.*postgres.*'
 
-  - name: "postgres"
+  - name: "otel-collector"
     cmdline:
-      - ".*postgres.*"
+      - '.*otelcol.*'
 
-  - name: "otelcol"
+  - name: "prometheus"
     cmdline:
-      - ".*otelcol.*"
+      - '.*prometheus.*'
+
+  - name: "grafana"
+    cmdline:
+      - '.*grafana.*'

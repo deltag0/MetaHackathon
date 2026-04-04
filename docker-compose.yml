@@ -23,6 +23,7 @@ services:
 
   process-exporter:
     image: ncabatoff/process-exporter:latest
+    pid: host
     command:
       - --config.path
       - /etc/process-exporter/config.yml
@@ -38,3 +39,21 @@ services:
     ports:
       - 8889:8889
       - 4318:4318
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  grafana-data:
