@@ -25,9 +25,9 @@ def create_app():
     db.connect(reuse_if_open=True)
     db.create_tables([User, URL, Event], safe=True)
     try:
-        db.execute_sql("SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1));")
-        db.execute_sql("SELECT setval('urls_id_seq', COALESCE((SELECT MAX(id) FROM urls), 1));")
-        db.execute_sql("SELECT setval('events_id_seq', COALESCE((SELECT MAX(id) FROM events), 1));")
+        db.execute_sql("SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 0) + 1, false);")
+        db.execute_sql("SELECT setval('urls_id_seq', COALESCE((SELECT MAX(id) FROM urls), 0) + 1, false);")
+        db.execute_sql("SELECT setval('events_id_seq', COALESCE((SELECT MAX(id) FROM events), 0) + 1, false);")
     except Exception:
         pass
     db.close()

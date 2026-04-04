@@ -77,6 +77,8 @@ def bulk_urls():
         for i in range(0, len(cleaned), 100):
             URL.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
 
+    db.execute_sql("SELECT setval('urls_id_seq', (SELECT MAX(id) FROM urls));")
+
     return jsonify(count=len(cleaned)), 201
 
 

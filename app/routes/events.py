@@ -78,6 +78,8 @@ def bulk_events():
         for i in range(0, len(cleaned), 100):
             Event.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
 
+    db.execute_sql("SELECT setval('events_id_seq', (SELECT MAX(id) FROM events));")
+
     return jsonify(count=len(cleaned)), 201
 
 

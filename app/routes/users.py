@@ -62,6 +62,8 @@ def bulk_users():
         for i in range(0, len(cleaned), 100):
             User.insert_many(cleaned[i:i + 100]).on_conflict_ignore().execute()
 
+    db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));")
+
     return jsonify(count=len(cleaned)), 201
 
 
