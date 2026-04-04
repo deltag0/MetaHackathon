@@ -197,6 +197,7 @@ def delete_link(code):
         try:
             cache.delete(f"url:{code}")
         except Exception:
+
             pass
 
     _log_event(url.id, None, "deleted", {"short_code": code})
