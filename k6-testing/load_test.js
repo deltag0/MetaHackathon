@@ -107,7 +107,7 @@ export default function () {
     JSON.stringify({
       original_url: `https://example.com/load-test-${__VU}-${__ITER}-${Date.now()}`,
       title: `Load Test URL ${__VU}`,
-      user_id: userId || 1,
+      user_id: userId,
     }),
     { headers }
   );
@@ -157,7 +157,7 @@ export default function () {
       `${BASE_URL}/events`,
       JSON.stringify({
         url_id: urlId,
-        user_id: userId || 1,
+        user_id: userId,
         event_type: "click",
         details: { referrer: "https://google.com", source: "load_test" },
       }),
