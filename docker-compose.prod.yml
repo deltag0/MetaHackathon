@@ -11,7 +11,7 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app.log
+      LOG_FILE_PATH: /app/logs/app-1.log
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - app1_logs:/app/logs
@@ -34,7 +34,7 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app.log
+      LOG_FILE_PATH: /app/logs/app-2.log
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - app2_logs:/app/logs
@@ -57,7 +57,7 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app.log
+      LOG_FILE_PATH: /app/logs/app-3.log
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - app3_logs:/app/logs
@@ -80,7 +80,7 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app.log
+      LOG_FILE_PATH: /app/logs/app-4.log
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - app4_logs:/app/logs

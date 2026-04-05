@@ -83,7 +83,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_errors_total{app_instance=~\"$instance\"}[5m])) / sum(rate(http_requests_total{app_instance=~\"$instance\"}[5m])) * 100"
+          "expr": "sum(rate(http_errors_total{app_instance=~\"$instance\"}[5m])) / clamp_min(sum(rate(http_requests_total{app_instance=~\"$instance\"}[5m])), 1e-10) * 100"
         }
       ],
       "options": {
@@ -496,7 +496,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_errors_total{app_instance=~\"$instance\", http_route=~\"$route\"}[5m])) / sum(rate(http_requests_total{app_instance=~\"$instance\", http_route=~\"$route\"}[5m])) * 100",
+          "expr": "sum(rate(http_errors_total{app_instance=~\"$instance\", http_route=~\"$route\"}[5m])) / clamp_min(sum(rate(http_requests_total{app_instance=~\"$instance\", http_route=~\"$route\"}[5m])), 1e-10) * 100",
           "legendFormat": "Error %"
         }
       ],
