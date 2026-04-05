@@ -8,14 +8,7 @@ exporters:
   prometheus:
     endpoint: 0.0.0.0:8889
   debug:
-    verbosity: detailed
-
-service:
-  pipelines:
-    metrics:
-      receivers: [otlp]
-      processors: [batch, memory_limiter]
-      exporters: [prometheus]
+    verbosity: basic
 
 processors:
   memory_limiter:
@@ -23,3 +16,11 @@ processors:
     limit_mib: 4000
     spike_limit_mib: 500
   batch:
+    timeout: 10s
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch, memory_limiter]
+      exporters: [prometheus]
