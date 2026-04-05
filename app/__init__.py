@@ -16,6 +16,7 @@ from app.models.user import User
 from app.models.url import URL
 from app.models.event import Event
 from app.routes import register_routes
+from app.telemetry import init_telemetry
 
 
 class JsonFormatter(logging.Formatter):
@@ -134,6 +135,7 @@ def create_app():
     db.close()
 
     register_routes(app)
+    init_telemetry(app)
 
     @app.before_request
     def _before_request_log_start():

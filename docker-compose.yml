@@ -58,6 +58,7 @@ services:
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
       LOG_FILE_PATH: /app/logs/app-1.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - ./logs/app-1:/app/logs
     depends_on:
@@ -84,6 +85,7 @@ services:
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
       LOG_FILE_PATH: /app/logs/app-2.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - ./logs/app-2:/app/logs
     depends_on:
@@ -112,6 +114,7 @@ services:
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
       LOG_FILE_PATH: /app/logs/app-3.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - ./logs/app-3:/app/logs
     depends_on:
@@ -140,6 +143,7 @@ services:
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
       LOG_FILE_PATH: /app/logs/app-4.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
     volumes:
       - ./logs/app-4:/app/logs
     depends_on:
@@ -202,6 +206,7 @@ services:
             -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
             -e "s|ALERT_EMAIL_TO_VALUE|$$ALERT_EMAIL_TO|g" \
             -e "s|ALERT_SMS_TO_VALUE|$$ALERT_SMS_TO|g" \
+            -e "s|DISCORD_WEBHOOK_URL_VALUE|$$DISCORD_WEBHOOK_URL|g" \
             /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml \
         && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml
     environment:
@@ -211,10 +216,17 @@ services:
       SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD}
       ALERT_EMAIL_TO: ${ALERT_EMAIL_TO}
       ALERT_SMS_TO: ${ALERT_SMS_TO}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
     volumes:
       - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
     ports:
       - 9093:9093
+
+  alertmanager-discord:
+    image: benjojo/alertmanager-discord:latest
+    environment:
+      DISCORD_WEBHOOK: ${DISCORD_WEBHOOK_URL}
+    restart: always
 
   blackbox-exporter:
     image: prom/blackbox-exporter:latest
