@@ -312,3 +312,7 @@ volumes:
   app2_logs:
   app3_logs:
   app4_logs:
+
+networks:
+  default:
+    attachable: true
