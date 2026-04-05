@@ -1,0 +1,31 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@example.com'
+  smtp_auth_username: 'replace-with-email-username'
+  smtp_auth_password: 'replace-with-email-app-password'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'job']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 2h
+  receiver: email-only
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: email-and-sms
+
+receivers:
+  - name: email-only
+    email_configs:
+      - to: 'replace-with-your-email@example.com'
+        send_resolved: true
+
+  - name: email-and-sms
+    email_configs:
+      - to: 'replace-with-your-email@example.com'
+        send_resolved: true
+      - to: 'replace-with-your-phone-sms-gateway@example.com'
+        send_resolved: true
