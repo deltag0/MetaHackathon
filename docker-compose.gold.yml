@@ -147,7 +147,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx.tier3.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.gold.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       app-1:
         condition: service_healthy

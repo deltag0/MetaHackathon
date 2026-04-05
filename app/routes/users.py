@@ -60,7 +60,7 @@ def get_users_list():
 @users_bp.route("/bulk", methods=["POST"])
 def load_users_csv():
     data = request.get_json(silent=True) or {}
-    filename = data.get("file", "users.csv")
+    filename = data.get("file", "app/data/users.csv")
 
     filepath = os.path.join(_PROJECT_ROOT, filename)
     try:

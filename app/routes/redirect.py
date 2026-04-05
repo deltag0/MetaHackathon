@@ -86,7 +86,7 @@ def stats(code):
 
     click_count = (
         Event.select()
-        .where(Event.url == url.id, Event.event_type == "clicked")
+        .where(Event.url == url.id, Event.event_type == "click")
         .count()
     )
 

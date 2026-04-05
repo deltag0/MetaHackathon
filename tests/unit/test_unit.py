@@ -1,4 +1,14 @@
 """Unit tests — pure functions, no HTTP, no DB."""
+import logging
+import os
+import re
+from logging.handlers import RotatingFileHandler
+from unittest.mock import create_autospec, patch
+
+from flask import Flask
+
+from app import _configure_logging
+from app.routes.auth import _make_session_token, _verify_session_token
 from app.routes.links import _generate_short_code, _valid_url
 
 
@@ -57,7 +67,6 @@ def test_short_code_custom_length():
 
 
 def test_short_code_alphanumeric():
-    import re
     code = _generate_short_code()
     assert re.match(r"^[A-Za-z0-9]+$", code)
 
@@ -73,21 +82,49 @@ def test_short_code_unique():
 # ---------------------------------------------------------------------------
 
 def test_session_token_roundtrip(app):
-    from app.routes.auth import _make_session_token, _verify_session_token
     with app.app_context():
         token = _make_session_token(42)
         assert _verify_session_token(token) == 42
 
 
 def test_session_token_bad_signature(app):
-    from app.routes.auth import _verify_session_token
     with app.app_context():
         assert _verify_session_token("this.is.not.valid") is None
 
 
 def test_session_token_tampered(app):
-    from app.routes.auth import _make_session_token, _verify_session_token
     with app.app_context():
         token = _make_session_token(1)
         tampered = token[:-4] + "xxxx"
         assert _verify_session_token(tampered) is None
+
+
+# ---------------------------------------------------------------------------
+# _configure_logging — OSError and no-log-dir branches
+# ---------------------------------------------------------------------------
+
+def test_configure_logging_catches_ose_from_file_handler():
+    """OSError raised by RotatingFileHandler is caught; a warning is logged instead."""
+    flask_app = Flask("test_ose_logging")
+    with patch("app.RotatingFileHandler", side_effect=OSError("permission denied")):
+        _configure_logging(flask_app)
+    # Reaching here confirms the OSError was caught and did not propagate.
+
+
+def test_configure_logging_skips_makedirs_when_no_log_dir():
+    """When LOG_FILE_PATH has no directory component, os.makedirs must not be called."""
+    flask_app = Flask("test_nodir_logging")
+    orig = os.environ.get("LOG_FILE_PATH")
+    os.environ["LOG_FILE_PATH"] = "app_unit_test.log"
+    try:
+        fake_handler = create_autospec(RotatingFileHandler, instance=True)
+        fake_handler.level = logging.NOTSET
+        with patch("os.makedirs") as mock_mkdirs, \
+             patch("app.RotatingFileHandler", return_value=fake_handler):
+            _configure_logging(flask_app)
+        mock_mkdirs.assert_not_called()
+    finally:
+        if orig is None:
+            os.environ.pop("LOG_FILE_PATH", None)
+        else:
+            os.environ["LOG_FILE_PATH"] = orig
