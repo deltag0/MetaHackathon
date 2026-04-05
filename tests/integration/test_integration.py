@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 from app import create_app
 from app.database import db
-from app.models.event import Event
 from app.models.url import URL
 
 
@@ -525,7 +524,7 @@ def test_health_ready_with_no_cache_still_returns_ok(client):
 
 def test_create_app_swallows_db_create_tables_exception():
     """Exception from db.create_tables during startup is caught and logged as a warning."""
-    orig_db = db._obj
+    orig_db = db.obj
     try:
         with patch.object(db, "create_tables", side_effect=Exception("table race condition")):
             create_app()

@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from logging.handlers import RotatingFileHandler
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import create_autospec, patch
 
 from flask import Flask
 
