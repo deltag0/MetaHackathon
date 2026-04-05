@@ -207,6 +207,8 @@ One of the problems we had was with malformed data and we would get a lone error
 
 ## Decision Log
 
+For our decisions, we balanced choosing the best decision for the scope of the hackathon, but also scaling further for the future.
+
 ### Encoding Mechanism
 
 We had different options to choose for shortening the url:
@@ -252,6 +254,22 @@ We decided to use prometheus alongside OpenTelemetry because they are very light
 We chose to use process-exporter and node-exporter because they have great support for Grafana as well as good options for dashboards.  
 OpenTelemtry was a good fit to track metrics specific to our internal application (like latency). Instead of exposing an endpoint for prometheus to scrape, but OpenTelemetry can host its own server to which our server can send batches of data (we avoid sending traces every single request, adding a ton of overhead). This is a good option to keep growing our distributed application and scale even further, and add pre-processing to our app traces.
 
+### Databases
+
+For caching, we used Redis because it is the industry standard for in-memory caches, being extremely light weight. It has a very well documented API to integrate with python, so Redis was the natural choice for scalability. Other options could have been:
+- Memcached
+- Dragonfly
+
+We used PostgresSQL because for the scope of the application SQL would probably perform NoSQL because of its fast index lookup.
+
+### Digital Ocean Scalability
+
+In digital ocean, we decided to use droplets to run our application because we could use multiple machines to scale our servers horizontally. Our entire design was carefully crafted with the end goal of running a large scale distributed system.
+
+To accomodate running multiple droplets, we used a Postgres and Redis instance managed by postgress. If we hosted our own, we would have had to avoid running a new instance in each droplet, and creating backup databases with automatic promotion would have been unrealistic to manage alone. Digital Ocean's support was perfectly suited to our needs. Thus, even if a Database instance fails, our application can keep going while it restarts because we have standby databases always ready.
+
+
+We run 2 droplets, testin each with 4 instances of our application. We chose 4 insances on every droplet after performance testing ([3 Example Bugs](#3-example-bugs), point 2). We chose 2 droplets because we wanted to distribute server load across multiple machines and have a fail-safe if one machine ever fails.
 
 ---
 
