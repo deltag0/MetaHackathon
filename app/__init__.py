@@ -10,11 +10,8 @@ from dotenv import load_dotenv
 from flask import Flask, current_app, jsonify, g, request
 from flask_cors import CORS
 
-from app.database import init_db, db, check_db_connection
+from app.database import init_db, check_db_connection
 from app.cache import init_cache
-from app.models.user import User
-from app.models.url import URL
-from app.models.event import Event
 from app.routes import register_routes
 from app.telemetry import init_telemetry
 

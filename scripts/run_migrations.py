@@ -4,9 +4,6 @@ import logging
 from app.database import db
 
 # ensure models are imported
-from app.models.user import User
-from app.models.url import URL
-from app.models.event import Event
 
 from peewee_migrate import Router
 
@@ -21,7 +18,7 @@ def wait_for_db():
             db.close()
             logger.info("Database is ready!")
             return
-        except Exception as e:
+        except Exception:
             logger.info(f"Waiting for database... ({i+1}/{retries})")
             time.sleep(2)
     raise Exception("Could not connect to database after 60 seconds")

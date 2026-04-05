@@ -1,4 +1,3 @@
-import peewee as pw
 
 def migrate(migrator, database, fake=False, **kwargs):
     from app.models.user import User
