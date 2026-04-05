@@ -54,6 +54,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-1.log
+    volumes:
+      - ./logs/app-1:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -77,6 +80,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-2.log
+    volumes:
+      - ./logs/app-2:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -102,6 +108,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-3.log
+    volumes:
+      - ./logs/app-3:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -127,6 +136,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-4.log
+    volumes:
+      - ./logs/app-4:/app/logs
     depends_on:
       db:
         condition: service_healthy

@@ -1,0 +1,31 @@
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'SMTP_SMARTHOST_VALUE'
+  smtp_from: 'SMTP_FROM_VALUE'
+  smtp_auth_username: 'SMTP_AUTH_USERNAME_VALUE'
+  smtp_auth_password: 'SMTP_AUTH_PASSWORD_VALUE'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'job']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 2h
+  receiver: email-only
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: email-and-sms
+
+receivers:
+  - name: email-only
+    email_configs:
+      - to: 'ALERT_EMAIL_TO_VALUE'
+        send_resolved: true
+
+  - name: email-and-sms
+    email_configs:
+      - to: 'ALERT_EMAIL_TO_VALUE'
+        send_resolved: true
+      - to: 'ALERT_SMS_TO_VALUE'
+        send_resolved: true
