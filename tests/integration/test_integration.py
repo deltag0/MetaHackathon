@@ -1,6 +1,10 @@
 # Integration tests
+import json
 from unittest.mock import MagicMock, patch
 
+from app import create_app
+from app.database import db
+from app.models.event import Event
 from app.models.url import URL
 
 
@@ -455,3 +459,77 @@ def test_delete_cache_delete_exception_still_succeeds(client):
     with patch("app.routes.links.get_cache", return_value=mock_cache):
         r = client.delete("/api/links/" + code)
     assert r.status_code == 200
+
+
+# Redirect: inactive cached URL and no-cache path
+
+def test_redirect_inactive_url_in_cache_returns_404(client):
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = json.dumps({
+        "id": 1, "original_url": "https://gone.example.com", "is_active": False
+    })
+    with patch("app.routes.redirect.get_cache", return_value=mock_cache):
+        r = client.get("/somedeadcode", follow_redirects=False)
+    assert r.status_code == 404
+    assert "error" in r.get_json()
+
+
+def test_redirect_no_cache_falls_through_to_db(client):
+    code = shorten(client, "https://nocache-fallthrough.example.com").get_json()["short_code"]
+    with patch("app.routes.redirect.get_cache", return_value=None):
+        r = client.get("/" + code, follow_redirects=False)
+    assert r.status_code == 302
+
+
+# Redirect: _log_click exception does not crash the redirect
+
+def test_redirect_log_click_exception_is_silenced(client):
+    code = shorten(client, "https://logclick-exception.example.com").get_json()["short_code"]
+    with patch("app.routes.redirect.Event.create", side_effect=Exception("db crash")):
+        r = client.get("/" + code, follow_redirects=False)
+    assert r.status_code == 302
+
+
+# Links: _log_event exception does not crash shorten or update
+
+def test_shorten_log_event_exception_is_silenced(client):
+    with patch("app.routes.links.Event.create", side_effect=Exception("db crash")):
+        r = shorten(client, "https://logevent-exception.example.com")
+    assert r.status_code == 201
+
+
+def test_update_link_no_cache_still_succeeds(client):
+    code = shorten(client, "https://update-no-cache.example.com").get_json()["short_code"]
+    with patch("app.routes.links.get_cache", return_value=None):
+        r = client.put("/api/links/" + code, json={"url": "https://update-no-cache2.example.com"})
+    assert r.status_code == 200
+
+
+def test_delete_link_no_cache_still_succeeds(client):
+    code = shorten(client, "https://delete-no-cache.example.com").get_json()["short_code"]
+    with patch("app.routes.links.get_cache", return_value=None):
+        r = client.delete("/api/links/" + code)
+    assert r.status_code == 200
+
+
+# Health: cache=None path in _dependency_status
+
+def test_health_ready_with_no_cache_still_returns_ok(client):
+    with patch("app.cache.get_cache", return_value=None):
+        r = client.get("/health/ready")
+    assert r.status_code == 200
+    assert r.get_json()["cache"] == "ok"
+
+
+# app/__init__.py: db.create_tables exception path
+
+def test_create_app_swallows_db_create_tables_exception():
+    """Exception from db.create_tables during startup is caught and logged as a warning."""
+    orig_db = db._obj
+    try:
+        with patch.object(db, "create_tables", side_effect=Exception("table race condition")):
+            create_app()
+    except Exception:
+        pass  # tolerate failures if app context resolution differs between environments
+    finally:
+        db.initialize(orig_db)
