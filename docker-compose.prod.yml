@@ -84,7 +84,7 @@ services:
             -e "s|ALERT_SMS_TO_VALUE|$$ALERT_SMS_TO|g" \
             -e "s|DISCORD_WEBHOOK_URL_VALUE|$$DISCORD_WEBHOOK_URL|g" \
             /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml \
-        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml
+        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --cluster.listen-address=""
     environment:
       SMTP_SMARTHOST: ${SMTP_SMARTHOST:-localhost:25}
       SMTP_FROM: ${SMTP_FROM:-alerts@example.com}
