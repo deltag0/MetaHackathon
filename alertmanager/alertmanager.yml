@@ -15,7 +15,7 @@ route:
   routes:
     - matchers:
         - severity="critical"
-      receiver: email-and-sms
+      receiver: all-channels
 
 receivers:
   - name: email-only
@@ -23,9 +23,10 @@ receivers:
       - to: 'ALERT_EMAIL_TO_VALUE'
         send_resolved: true
 
-  - name: email-and-sms
+  - name: all-channels
     email_configs:
       - to: 'ALERT_EMAIL_TO_VALUE'
         send_resolved: true
-      - to: 'ALERT_SMS_TO_VALUE'
+    webhook_configs:
+      - url: 'http://alertmanager-discord:9094'
         send_resolved: true
