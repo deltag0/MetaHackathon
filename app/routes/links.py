@@ -138,7 +138,7 @@ def link_stats(code):
     if not url:
         return jsonify(error="Short link not found"), 404
 
-    click_count = Event.select().where(Event.url == url.id, Event.event_type == "clicked").count()
+    click_count = Event.select().where(Event.url == url.id, Event.event_type == "click").count()
     events = (
         Event.select()
         .where(Event.url == url.id)

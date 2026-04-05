@@ -1,3 +1,10 @@
+import csv
+import os
+import tempfile
+from unittest.mock import patch
+
+from app.models.url import URL
+
 
 def _create_url(client, original_url="https://example.com", title="Test", user_id=None):
     return client.post("/urls", json={"original_url": original_url, "title": title, "user_id": user_id})
@@ -137,3 +144,122 @@ def test_redirect_via_short_code(client):
     r = client.get("/" + short_code, follow_redirects=False)
     assert r.status_code == 302
     assert r.headers["Location"] == "https://redirect.example.com"
+
+
+# GET /urls — additional branch coverage
+
+def test_list_urls_returns_cached_response(client):
+    with patch("app.routes.urls.cache_get", return_value=[{"id": 42, "short_code": "abc"}]):
+        r = client.get("/urls")
+    assert r.status_code == 200
+    assert r.get_json() == [{"id": 42, "short_code": "abc"}]
+
+
+def test_list_urls_invalid_user_id_returns_400(client):
+    r = client.get("/urls?user_id=notanint")
+    assert r.status_code == 400
+    assert "user_id" in r.get_json()["error"]
+
+
+def test_list_urls_invalid_limit_falls_back_to_default(client):
+    r = client.get("/urls?limit=notanint")
+    assert r.status_code == 200
+    assert isinstance(r.get_json(), list)
+
+
+# GET /urls/<id> — cache hit
+
+def test_get_url_returns_cached_response(client):
+    with patch("app.routes.urls.cache_get", return_value={"id": 7, "short_code": "xyz"}):
+        r = client.get("/urls/7")
+    assert r.status_code == 200
+    assert r.get_json()["short_code"] == "xyz"
+
+
+# PUT /urls/<id> — original_url update
+
+def test_update_url_original_url(client):
+    url_id = _create_url(client, "https://before-orig.example.com").get_json()["id"]
+    r = client.put("/urls/" + str(url_id), json={"original_url": "https://after-orig.example.com"})
+    assert r.status_code == 200
+    assert r.get_json()["original_url"] == "https://after-orig.example.com"
+
+
+# POST /urls — additional branch coverage
+
+def test_create_url_with_nonexistent_user_returns_404(client):
+    r = client.post("/urls", json={"original_url": "https://badusr-url.example.com", "user_id": 99999})
+    assert r.status_code == 404
+    assert "user" in r.get_json()["error"]
+
+
+def test_create_url_retries_on_short_code_collision(client):
+    URL.create(short_code="collidex", original_url="https://pre-collision.example.com", is_active=True)
+
+    call_count = 0
+
+    def _mock_generate(length=7):
+        nonlocal call_count
+        call_count += 1
+        return "collidex" if call_count == 1 else "unique99"
+
+    with patch("app.routes.urls._generate_short_code", side_effect=_mock_generate):
+        r = client.post("/urls", json={"original_url": "https://collision-url.example.com"})
+
+    assert r.status_code == 201
+    assert r.get_json()["short_code"] == "unique99"
+    assert call_count >= 2
+
+
+# GET /urls/<short_code>/redirect
+
+def test_redirect_by_short_code_not_found_returns_404(client):
+    r = client.get("/urls/doesnotexist999/redirect", follow_redirects=False)
+    assert r.status_code == 404
+
+
+def test_redirect_by_short_code_inactive_returns_410(client):
+    url = _create_url(client, "https://inactive-sc-redir.example.com").get_json()
+    client.put("/urls/" + str(url["id"]), json={"is_active": False})
+    r = client.get("/urls/" + url["short_code"] + "/redirect", follow_redirects=False)
+    assert r.status_code == 410
+    assert "inactive" in r.get_json()["error"]
+
+
+def test_redirect_by_short_code_active_redirects(client):
+    url = _create_url(client, "https://active-sc-redir.example.com").get_json()
+    r = client.get("/urls/" + url["short_code"] + "/redirect", follow_redirects=False)
+    assert r.status_code == 302
+    assert r.headers["Location"] == "https://active-sc-redir.example.com"
+
+
+# POST /urls/bulk
+
+def test_bulk_load_urls_missing_file_returns_404(client):
+    r = client.post("/urls/bulk", json={"file": "no_such_urls_file.csv"})
+    assert r.status_code == 404
+    assert "not found" in r.get_json()["error"]
+
+
+def test_bulk_load_urls_success(client):
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, newline="", encoding="utf-8"
+    ) as f:
+        writer = csv.DictWriter(
+            f, fieldnames=["short_code", "original_url", "title", "is_active"]
+        )
+        writer.writeheader()
+        writer.writerow({
+            "short_code": "bulkurlx",
+            "original_url": "https://bulk-url-load.example.com",
+            "title": "Bulk URL",
+            "is_active": "True",
+        })
+        tmppath = f.name
+
+    try:
+        r = client.post("/urls/bulk", json={"file": tmppath})
+        assert r.status_code == 201
+        assert r.get_json()["count"] == 1
+    finally:
+        os.unlink(tmppath)
