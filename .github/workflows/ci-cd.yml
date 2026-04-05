@@ -104,28 +104,23 @@ jobs:
             cd ~/MetaHackathon
             git pull origin main
 
-            # Build images
             docker compose build app-1 frontend
             docker tag url-shortner-app-1 url-shortner-app
 
-            # Init swarm if not already active ("inactive" contains "active" so use exact match)
-            # Use DigitalOcean metadata API to get the droplet's public IP
             if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qx active; then
+              docker compose down 2>/dev/null || true
               PUBLIC_IP=$(curl -s --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
               docker swarm init --advertise-addr "$PUBLIC_IP"
             fi
 
-            # Deploy the stack (creates or updates in-place)
             if ! docker stack deploy -c docker-compose.swarm.yml url-shortner; then
               echo "Deployment failed!"
               docker stack ps url-shortner --no-trunc
               exit 1
             fi
 
-            # Wait for Swarm to create the overlay network and db to be reachable
             sleep 20
 
-            # Run DB migrations on the Swarm overlay network (avoids conflicting with Swarm's db)
             docker run --rm \
               --network url-shortner_default \
               -e DATABASE_NAME=hackathon_db \
