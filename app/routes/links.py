@@ -3,6 +3,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import base62
+import peewee
 from flask import current_app, Blueprint, jsonify, request
 
 from app.cache import get_cache, cache_delete_pattern
@@ -57,6 +58,8 @@ def shorten():
         return jsonify(error="url is required"), 400
     if not _valid_url(original_url):
         return jsonify(error="url must start with http:// or https://"), 400
+    if title and len(title) > 255:
+        return jsonify(error="title must be 255 characters or less"), 400
 
     existing = URL.get_or_none(URL.original_url == original_url, URL.user == user_id, URL.is_active)
     if existing:
@@ -67,21 +70,27 @@ def shorten():
             title=existing.title,
         )
 
-    short_code = _generate_short_code()
-
-    # ! should add measure to prevent infinite loop
-    while URL.select().where(URL.short_code == short_code).exists():
+    max_retries = 10
+    url = None
+    
+    for _ in range(max_retries):
         short_code = _generate_short_code()
-
-    url = URL.create(
-        short_code=short_code,
-        original_url=original_url,
-        title=title,
-        is_active=True,
-        user_id=user_id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
+        try:
+            url = URL.create(
+                short_code=short_code,
+                original_url=original_url,
+                title=title,
+                is_active=True,
+                user_id=user_id,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            break
+        except peewee.IntegrityError:
+            continue
+            
+    if not url:
+        return jsonify(error="could not generate a unique short code"), 500
 
     _log_event(url.id, user_id, "created", {"short_code": short_code, "original_url": original_url})
 
@@ -99,6 +108,8 @@ def list_links():
     try:
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 20))
+        if page < 1 or per_page < 1 or per_page > 100:
+            raise ValueError("pagination bounds exceeded")
     except (ValueError, TypeError):
         current_app.logger.warning(
             "invalid_pagination_parameters",
@@ -109,7 +120,7 @@ def list_links():
                 "value": request.args.get("page") or request.args.get("per_page"),
             },
         )
-        return jsonify(error="page and per_page must be integers"), 400
+        return jsonify(error="page must be >= 1 and per_page must be between 1 and 100"), 400
 
     query = URL.select().where(URL.is_active).order_by(URL.created_at.desc())
     total = query.count()
@@ -174,6 +185,8 @@ def update_link(code):
 
     if new_url and not _valid_url(new_url):
         return jsonify(error="url must start with http:// or https://"), 400
+    if new_title and len(new_title) > 255:
+        return jsonify(error="title must be 255 characters or less"), 400
 
     old_url = url.original_url
     if new_url:
