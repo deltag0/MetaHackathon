@@ -263,3 +263,11 @@ def test_bulk_load_urls_success(client):
         assert r.get_json()["count"] == 1
     finally:
         os.unlink(tmppath)
+
+
+# URLs: _log_event exception does not crash create URL
+
+def test_create_url_log_event_exception_is_silenced(client):
+    with patch("app.routes.urls.Event.create", side_effect=Exception("db crash")):
+        r = _create_url(client, "https://logevent-exc.example.com")
+    assert r.status_code == 201
