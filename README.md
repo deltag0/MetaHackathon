@@ -94,13 +94,42 @@ For logging in to Grafana, users can user `admin` as the username and `admin` as
 
 ## Deploy Guide
 
-### Staging
+### DigitalOcean Deploy
 
-Instructions for deploying to staging environment.
+1. Provision 3 DigitalOcean droplets:
+	- App droplet 1 (backend + nginx)
+	- App droplet 2 (backend + nginx)
+	- Observability droplet (Prometheus, Grafana, Loki, Alertmanager, OTel)
 
-### Production
+2. On each droplet:
+	- Install Docker Engine + Docker Compose plugin
+	- Open required firewall ports (80 for app, 3000/9090/9093/3100/4318/8889 for observability)
+	- Clone this repository to `~/MetaHackathon`
 
-Instructions for deploying to production environment.
+3. Set up managed services in DigitalOcean:
+	- Managed PostgreSQL cluster
+	- Managed Redis instance
+
+4. Add the droplet IPs and service configuration to your deployment environment (`DO_HOST_1`, `DO_HOST_2`, `DO_OBSERVABILITY`, DB/Redis values).
+
+5. Push to `main`:
+
+```bash
+git checkout main
+git pull
+git push
+```
+
+6. CI/CD workflow will automatically:
+	- Deploy app stack to `DO_HOST_1` and `DO_HOST_2` with `docker-compose.prod.yml`
+	- Run database migrations (on droplet 1)
+	- Deploy observability stack to `DO_OBSERVABILITY` with `docker-compose.observability.prod.yml`
+	- Full deploy logic lives in `.github/workflows/ci-cd.yml` under the `deploy` job
+
+7. Validate after deploy:
+	- App health: `http://<DO_HOST_1>/health/live` and `http://<DO_HOST_2>/health/live`
+	- Prometheus targets: `http://<DO_OBSERVABILITY>:9090/targets`
+	- Grafana: `http://<DO_OBSERVABILITY>:3000`
 
 ---
 
