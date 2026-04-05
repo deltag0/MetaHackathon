@@ -29,6 +29,30 @@ scrape_configs:
       - targets: ['process-exporter:9256']
     metrics_path: /metrics
 
+  - job_name: 'blackbox-health'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://nginx:80/health/live
+          - http://nginx:80/health/ready
+        labels:
+          service: app
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 15s
+
+  - job_name: 'blackbox-exporter'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+    metrics_path: /metrics
+
   - job_name: 'loki'
     static_configs:
       - targets: ['loki:3100']

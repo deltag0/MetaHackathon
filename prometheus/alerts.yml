@@ -29,6 +29,27 @@ groups:
           summary: "Low disk space"
           description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} has less than 15% free space."
 
+  - name: service-health
+    interval: 15s
+    rules:
+      - alert: ServiceDown
+        expr: probe_success{job="blackbox-health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "Health probe {{ $labels.instance }} has been failing for more than 2 minutes. The application is unreachable."
+
+      - alert: ServiceHighLatency
+        expr: probe_duration_seconds{job="blackbox-health"} > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service high latency"
+          description: "Health probe {{ $labels.instance }} is taking more than 5 seconds to respond."
+
   - name: observability-stack
     interval: 30s
     rules:

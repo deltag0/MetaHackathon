@@ -1,5 +1,6 @@
 name: url-shortner
 services:
+  # ── App infrastructure ──────────────────────────────────────────────
   db:
     image: postgres:16
     environment:
@@ -10,28 +11,45 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "synchronous_commit=off"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   redis:
     image: redis:7
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --save ""
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
-  app:
+  # ── App instances (gold: 4 instances + nginx LB) ────────────────────
+  app-1:
     build: .
-    ports:
-      - "5000:5000"
     environment:
-      FLASK_DEBUG: "false"
-      FLASK_HOST: 0.0.0.0
-      FLASK_PORT: "5000"
       DATABASE_NAME: hackathon_db
       DATABASE_HOST: db
       DATABASE_PORT: "5432"
@@ -39,9 +57,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
-      LOG_FILE_PATH: ${LOG_FILE_PATH:-/app/logs/app.log}
+      LOG_FILE_PATH: /app/logs/app-1.log
     volumes:
-      - ./logs/app:/app/logs
+      - ./logs/app-1:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -49,9 +67,111 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
+      start_period: 15s
       retries: 5
+    restart: always
+
+  app-2:
+    build: .
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-2.log
+    volumes:
+      - ./logs/app-2:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: always
+
+  app-3:
+    build: .
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-3.log
+    volumes:
+      - ./logs/app-3:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: always
+
+  app-4:
+    build: .
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: random_secret_key
+      LOG_FILE_PATH: /app/logs/app-4.log
+    volumes:
+      - ./logs/app-4:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.gold.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app-1:
+        condition: service_healthy
+      app-2:
+        condition: service_healthy
+      app-3:
+        condition: service_healthy
+      app-4:
+        condition: service_healthy
     restart: always
 
   frontend:
@@ -60,7 +180,8 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "3000:3000"
-    
+
+  # ── Observability stack ─────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -71,12 +192,36 @@ services:
 
   alertmanager:
     image: prom/alertmanager:latest
+    entrypoint: /bin/sh
     command:
-      - --config.file=/etc/alertmanager/alertmanager.yml
+      - -c
+      - |
+        sed -e "s|SMTP_SMARTHOST_VALUE|$$SMTP_SMARTHOST|g" \
+            -e "s|SMTP_FROM_VALUE|$$SMTP_FROM|g" \
+            -e "s|SMTP_AUTH_USERNAME_VALUE|$$SMTP_AUTH_USERNAME|g" \
+            -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
+            -e "s|ALERT_EMAIL_TO_VALUE|$$ALERT_EMAIL_TO|g" \
+            -e "s|ALERT_SMS_TO_VALUE|$$ALERT_SMS_TO|g" \
+            /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml \
+        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml
+    environment:
+      SMTP_SMARTHOST: ${SMTP_SMARTHOST}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_AUTH_USERNAME: ${SMTP_AUTH_USERNAME}
+      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO}
+      ALERT_SMS_TO: ${ALERT_SMS_TO}
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
     ports:
       - 9093:9093
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    volumes:
+      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    ports:
+      - 9115:9115
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -95,7 +240,7 @@ services:
       - ./prometheus/process-exporter.yml:/etc/process-exporter/config.yml:ro
     ports:
       - 9256:9256
-    
+
   otel:
     image: otel/opentelemetry-collector-contrib:latest
     volumes:

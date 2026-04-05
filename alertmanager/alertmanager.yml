@@ -1,9 +1,9 @@
 global:
   resolve_timeout: 5m
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alerts@example.com'
-  smtp_auth_username: 'replace-with-email-username'
-  smtp_auth_password: 'replace-with-email-app-password'
+  smtp_smarthost: 'SMTP_SMARTHOST_VALUE'
+  smtp_from: 'SMTP_FROM_VALUE'
+  smtp_auth_username: 'SMTP_AUTH_USERNAME_VALUE'
+  smtp_auth_password: 'SMTP_AUTH_PASSWORD_VALUE'
   smtp_require_tls: true
 
 route:
@@ -20,12 +20,12 @@ route:
 receivers:
   - name: email-only
     email_configs:
-      - to: 'replace-with-your-email@example.com'
+      - to: 'ALERT_EMAIL_TO_VALUE'
         send_resolved: true
 
   - name: email-and-sms
     email_configs:
-      - to: 'replace-with-your-email@example.com'
+      - to: 'ALERT_EMAIL_TO_VALUE'
         send_resolved: true
-      - to: 'replace-with-your-phone-sms-gateway@example.com'
+      - to: 'ALERT_SMS_TO_VALUE'
         send_resolved: true
