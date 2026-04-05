@@ -1,195 +1,207 @@
-# MLH PE Hackathon — Flask + Peewee + PostgreSQL Template
+# Meta Production Engineering Hackathon
 
-A minimal hackathon starter template. You get the scaffolding and database wiring — you build the models, routes, and CSV loading logic.
+This is the most scalable, reliable and guaranteed to wake up the on-call engineer url-shortner of all time. Provided to you by 4 students from Canada, 2 from Waterloo and 2 from Concordia.
 
-**Stack:** Flask · Peewee ORM · PostgreSQL · uv
+## Quick Links
 
-## **Important**
+- [Getting Started](#getting-started)
+- [Diagram](#architecture)
+- [Apis](#endpoints)
+- [Deploy Guide](#deploy-guide)
+- [Troubleshooting](#troubleshooting)
+- [Config](#config)
+- [Runbooks](#runbooks)
+- [Decision Log](#decision-log)
+- [Capacity Plan](#capacity-plan)
+- [License](#license)
 
-You need to work with around the seed files that you can find in [MLH PE Hackathon](https://mlh-pe-hackathon.com) platform. This will help you build the schema for the database and have some data to do some testing and submit your project for judging. If you need help with this, reach out on Discord or on the Q&A tab on the platform.
+---
 
-## Prerequisites
+## Getting Started
 
-- **uv** — a fast Python package manager that handles Python versions, virtual environments, and dependencies automatically.
-  Install it with:
+### Prerequisites
 
-    ```bash
-    # macOS / Linux
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+- Docker & Docker Compose
+- Node.js 20+ (for local frontend dev)
+- Python 3.11+ with uv package manager
 
-    # Windows (PowerShell)
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    ```
+### Initial Setup
 
-    For other methods see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
+For the setup instructions, we will assume the user remains in the same directory as indicated by the steps.
 
-- PostgreSQL running locally (you can use Docker or a local instance)
-
-## uv Basics
-
-`uv` manages your Python version, virtual environment, and dependencies automatically — no manual `python -m venv` needed.
-
-| Command               | What it does                                             |
-| --------------------- | -------------------------------------------------------- |
-| `uv sync`             | Install all dependencies (creates `.venv` automatically) |
-| `uv run <script>`     | Run a script using the project's virtual environment     |
-| `uv add <package>`    | Add a new dependency                                     |
-| `uv remove <package>` | Remove a dependency                                      |
-
-## Quick Start
+1. Clone this repository:
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url> && cd mlh-pe-hackathon
-
-# 2. Install dependencies
-uv sync
-
-# 3. Create the database
-createdb hackathon_db
-
-# 4. Configure environment
-cp .env.example .env   # edit if your DB credentials differ
-
-# 5. Run the server
-uv run run.py
-
-# 6. Verify
-curl http://localhost:5000/health
-# → {"status":"ok"}
+git clone <repository-url>
+cd MetaHackathon # remain in this directory
 ```
 
-## Project Structure
+2. Create a `.env` file:
 
-```
-mlh-pe-hackathon/
-├── app/
-│   ├── __init__.py          # App factory (create_app)
-│   ├── database.py          # DatabaseProxy, BaseModel, connection hooks
-│   ├── models/
-│   │   └── __init__.py      # Import your models here
-│   └── routes/
-│       └── __init__.py      # register_routes() — add blueprints here
-├── .env.example             # DB connection template
-├── .gitignore               # Python + uv gitignore
-├── .python-version          # Pin Python version for uv
-├── pyproject.toml           # Project metadata + dependencies
-├── run.py                   # Entry point: uv run run.py
-└── README.md
+```bash
+touch .env
 ```
 
-## How to Add a Model
+3. Start the full stack with Docker:
 
-1. Create a file in `app/models/`, e.g. `app/models/product.py`:
-
-```python
-from peewee import CharField, DecimalField, IntegerField
-
-from app.database import BaseModel
-
-
-class Product(BaseModel):
-    name = CharField()
-    category = CharField()
-    price = DecimalField(decimal_places=2)
-    stock = IntegerField()
+```bash
+docker compose up --build -d
 ```
 
-2. Import it in `app/models/__init__.py`:
+4. Verify services are running:
 
-```python
-from app.models.product import Product
-```
+- **API:** http://localhost:5000/health
+- **Frontend:** http://localhost:3000
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3001
 
-3. Create the table (run once in a Python shell or a setup script):
+For logging in to Grafana, users can user `admin` as the username and `admin` as the password`
 
-```python
-from app.database import db
-from app.models.product import Product
+---
 
-db.create_tables([Product])
-```
+## Architecture
 
-## How to Add Routes
+![System Architecture Diagram](docs/architecture/diagrams/mermaidDiagram.png)
 
-1. Create a blueprint in `app/routes/`, e.g. `app/routes/products.py`:
+---
 
-```python
-from flask import Blueprint, jsonify
-from playhouse.shortcuts import model_to_dict
+## Endpoints
 
-from app.models.product import Product
+### Health Checks
 
-products_bp = Blueprint("products", __name__)
+- `GET /health` - Service health status
+- `GET /health/live` - Liveness probe
+- `GET /health/ready` - Readiness probe
+
+### Links API
+
+- `POST /links/create` - Create a short URL
+- `GET /links/<id>` - Retrieve link metadata
+
+### Authentication
+
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - User login
+
+---
+
+## Deploy Guide
+
+### Staging
+
+Instructions for deploying to staging environment.
+
+### Production
+
+Instructions for deploying to production environment.
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Services won't start
+
+- Check Docker is running
+- Verify `.env` variables are set correctly
+- Review logs: `docker compose logs -f <service>`
+
+#### Database connection errors
+
+- Ensure PostgreSQL is healthy: `docker compose ps db`
+- Check connection string in `.env`
+
+#### Prometheus has no data
+
+- Verify exporters are running: `docker compose ps`
+- Check scrape targets: http://localhost:9090/targets
+
+### Advanced Debugging
+Debugging issues, especially during runtime can be facilitated by the detailed logs we included in the application. These log files are generated locally in `./logs/app*` for each instance of the server.
+
+The log files must include the following fields:
+
+- `ts`: time log was recorded
+- `level`: level of importance
+- `logger`: the application instance that logged the entry
+- `event`: event recorded in the application such as `request_completed`
+- `service`: which service the log occured in
 
 
-@products_bp.route("/products")
-def list_products():
-    products = Product.select()
-    return jsonify([model_to_dict(p) for p in products])
-```
+Logs can have additional entries to become traces. The additional entries can include:
 
-2. Register it in `app/routes/__init__.py`:
+- `endpoint`: The endpoint the log occured on
+- `user_id`: Which user caused the log
+- `method`: Whether it was a POST/GET request
+ 
+- . . . (more defined in `init.py` in the `JsonFormatter` class)
 
-```python
-def register_routes(app):
-    from app.routes.products import products_bp
-    app.register_blueprint(products_bp)
-```
+So, if a bug occurs, a good first step is to look through the logs at the time it occured, and look for a `WARNING` or `ERROR` log.
 
-## How to Load CSV Data
+Users can consult the log file by SSHing in the machine running the application or by going to `localhost:3001` on the explore tab and query logs with Loki.
+  
 
-```python
-import csv
-from peewee import chunked
-from app.database import db
-from app.models.product import Product
+---
 
-def load_csv(filepath):
-    with open(filepath, newline="") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+## Config
 
-    with db.atomic():
-        for batch in chunked(rows, 100):
-            Product.insert_many(batch).execute()
-```
+### Environment Variables
 
-## Useful Peewee Patterns
+| Variable | Example | Description |
+|----------|---------|-------------|
+| `DATABASE_HOST` | `localhost` | PostgreSQL host |
+| `DATABASE_PORT` | `5432` | PostgreSQL port |
+| `DATABASE_USER` | `postgres` | DB user |
+| `DATABASE_PASSWORD` | `postgres` | DB password |
+| `REDIS_URL` | `redis://redis:6379` | Redis connection |
+| `SECRET_KEY` | `secret` | Flask secret key |
+| `SMTP_SMARTHOST` | `smtp.gmail.com:587` | SMTP server (for alerts) |
+| `SMTP_FROM` | `alerts@example.com` | Alert sender email |
 
-```python
-from peewee import fn
-from playhouse.shortcuts import model_to_dict
+---
 
-# Select all
-products = Product.select()
+## Runbooks
 
-# Filter
-cheap = Product.select().where(Product.price < 10)
+### Incident Response
 
-# Get by ID
-p = Product.get_by_id(1)
+- [Backend Outage](#)
+- [Database Issues](#)
+- [High Latency](#)
 
-# Create
-Product.create(name="Widget", category="Tools", price=9.99, stock=50)
+### Operational Tasks
 
-# Convert to dict (great for JSON responses)
-model_to_dict(p)
+- [Scaling the Backend](#)
+- [Backup Procedures](#)
+- [Log Access](#)
 
-# Aggregations
-avg_price = Product.select(fn.AVG(Product.price)).scalar()
-total = Product.select(fn.SUM(Product.stock)).scalar()
+---
 
-# Group by
-from peewee import fn
-query = (Product
-         .select(Product.category, fn.COUNT(Product.id).alias("count"))
-         .group_by(Product.category))
-```
+## Decision Log
 
-## Tips
+Record architectural decisions, trade-offs, and rationale.
 
-- Use `model_to_dict` from `playhouse.shortcuts` to convert model instances to dictionaries for JSON responses.
-- Wrap bulk inserts in `db.atomic()` for transactional safety and performance.
-- The template uses `teardown_appcontext` for connection cleanup, so connections are closed even when requests fail.
-- Check `.env.example` for all available configuration options.
+| Date | Decision | Rationale |
+|------|----------|----------|
+| 2026-04-04 | Use process-exporter for app visibility | Avoids direct app scraping |
+| 2026-04-04 | Multi-container observability stack | Comprehensive monitoring |
+
+---
+
+## Capacity Plan
+
+### Current Limits
+
+- **API Throughput:** TBD req/s
+- **Database:** PostgreSQL 16, 10GB storage
+- **Cache:** Redis, X GB
+
+### Growth Plan
+
+Document scaling strategy and projected timelines.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

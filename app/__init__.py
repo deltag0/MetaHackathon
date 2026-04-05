@@ -111,7 +111,6 @@ def _configure_logging(app: Flask) -> None:
             },
         )
 
-
 def create_app():
     load_dotenv()
 
