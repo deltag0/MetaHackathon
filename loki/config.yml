@@ -16,12 +16,20 @@ schema_config:
   configs:
     - from: 2024-01-01
       store: tsdb
-      object_store: filesystem
+      object_store: s3
       schema: v13
       index:
         prefix: index_
         period: 24h
 
 storage_config:
-  filesystem:
-    directory: /loki/chunks
+  tsdb_shipper:
+    active_index_directory: /loki/index
+    cache_location: /loki/index_cache
+  aws:
+    bucketnames: ${LOKI_S3_BUCKET}
+    region: ${AWS_REGION}
+    s3forcepathstyle: false
+
+compactor:
+  working_directory: /loki/compactor

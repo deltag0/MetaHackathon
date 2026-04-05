@@ -187,7 +187,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.gold.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       app-1:
         condition: service_healthy
@@ -284,7 +284,14 @@ services:
 
   loki:
     image: grafana/loki:3.0.0
-    command: -config.file=/etc/loki/config.yml
+    command:
+      - -config.file=/etc/loki/config.yml
+      - -config.expand-env=true
+    environment:
+      - AWS_ACCESS_KEY_ID=${S3_KEY}
+      - AWS_SECRET_ACCESS_KEY=${SECRET_S3_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - LOKI_S3_BUCKET=${LOKI_S3_BUCKET}
     ports:
       - "3100:3100"
     volumes:
