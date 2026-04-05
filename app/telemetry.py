@@ -4,7 +4,7 @@ Exports the four Golden Signals to an OTel Collector via OTLP/HTTP:
   - Latency:    http_request_duration_seconds (histogram)
   - Traffic:    http_requests_total (counter)
   - Errors:     http_errors_total (counter)
-  - Saturation: db_pool_active_connections, http_requests_in_flight (gauges)
+  - Saturation: http_requests_in_flight (gauge)
 """
 
 import os
@@ -75,12 +75,6 @@ def init_telemetry(app: Flask) -> None:
         description="Number of HTTP requests currently being processed",
     )
 
-    db_pool_gauge = meter.create_observable_gauge(
-        name="db_pool_active_connections",
-        description="Number of active database connections in the pool",
-        callbacks=[_db_pool_callback],
-    )
-
     @app.before_request
     def _otel_before():
         g.otel_start = time.perf_counter()
@@ -110,22 +104,3 @@ def init_telemetry(app: Flask) -> None:
 
         in_flight_gauge.add(-1, {"instance": instance_name})
         return response
-
-
-def _db_pool_callback(options):
-    """Observable callback for DB pool active connections."""
-    from app.database import db
-
-    try:
-        pool = db.obj
-        if hasattr(pool, "_in_use"):
-            active = len(pool._in_use)
-        else:
-            active = 0
-    except Exception:
-        active = 0
-
-    instance_name = os.environ.get("LOG_FILE_PATH", "app")
-    instance_name = instance_name.rsplit("/", 1)[-1].replace(".log", "")
-
-    yield metrics.Observation(active, {"instance": instance_name})

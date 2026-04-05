@@ -140,14 +140,14 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "DB Pool Active",
-      "description": "Active database connections across all instances",
+      "title": "Memory Usage",
+      "description": "Node memory usage percentage",
       "gridPos": { "x": 18, "y": 1, "w": 6, "h": 4 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(db_pool_active_connections{app_instance=~\"$instance\"})"
+          "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))"
         }
       ],
       "options": {
@@ -157,12 +157,13 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "percent",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 100 },
-              { "color": "red", "value": 150 }
+              { "color": "yellow", "value": 80 },
+              { "color": "red", "value": 95 }
             ]
           }
         }
@@ -584,37 +585,10 @@
       "collapsed": false
     },
     {
-      "id": 21,
-      "type": "timeseries",
-      "title": "DB Pool Active Connections",
-      "gridPos": { "x": 0, "y": 60, "w": 12, "h": 8 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "db_pool_active_connections{app_instance=~\"$instance\"}",
-          "legendFormat": "{{ app_instance }}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "fillOpacity": 15, "lineWidth": 2 },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 30 },
-              { "color": "red", "value": 38 }
-            ]
-          }
-        }
-      }
-    },
-    {
       "id": 22,
       "type": "timeseries",
       "title": "In-Flight Requests",
-      "gridPos": { "x": 12, "y": 60, "w": 12, "h": 8 },
+      "gridPos": { "x": 0, "y": 60, "w": 12, "h": 8 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
