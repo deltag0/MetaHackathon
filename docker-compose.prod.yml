@@ -11,8 +11,8 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app-1.log
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
+      LOG_FILE_PATH: /app/logs/app.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://${DO_OBSERVABILITY}:4318
     volumes:
       - app1_logs:/app/logs
     healthcheck:
@@ -34,8 +34,8 @@ services:
       DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
       REDIS_URL: ${REDIS_URL}
       SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app-2.log
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
+      LOG_FILE_PATH: /app/logs/app.log
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://${DO_OBSERVABILITY}:4318
     volumes:
       - app2_logs:/app/logs
     healthcheck:
@@ -59,86 +59,6 @@ services:
     ports:
       - "3000:3000"
 
-  prometheus:
-    image: prom/prometheus:latest
-    restart: always
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-
-  alertmanager:
-    image: prom/alertmanager:latest
-    restart: always
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        sed -e "s|SMTP_SMARTHOST_VALUE|$$SMTP_SMARTHOST|g" \
-            -e "s|SMTP_FROM_VALUE|$$SMTP_FROM|g" \
-            -e "s|SMTP_AUTH_USERNAME_VALUE|$$SMTP_AUTH_USERNAME|g" \
-            -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
-            -e "s|ALERT_EMAIL_TO_VALUE|$$ALERT_EMAIL_TO|g" \
-            -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
-            -e "s|ALERT_SMS_TO_VALUE|$$ALERT_SMS_TO|g" \
-            -e "s|DISCORD_WEBHOOK_URL_VALUE|$$DISCORD_WEBHOOK_URL|g" \
-            /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml \
-        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --cluster.listen-address=""
-    environment:
-      SMTP_SMARTHOST: ${SMTP_SMARTHOST:-localhost:25}
-      SMTP_FROM: ${SMTP_FROM:-alerts@example.com}
-      SMTP_AUTH_USERNAME: ${SMTP_AUTH_USERNAME:-}
-      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD:-}
-      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-admin@example.com}
-      ALERT_SMS_TO: ${ALERT_SMS_TO:-}
-      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
-    volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
-    ports:
-      - "9093:9093"
-
-  alertmanager-discord:
-    image: benjojo/alertmanager-discord:latest
-    restart: always
-    environment:
-      DISCORD_WEBHOOK: ${DISCORD_WEBHOOK_URL:-}
-
-  blackbox-exporter:
-    image: prom/blackbox-exporter:latest
-    restart: always
-    volumes:
-      - ./prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
-    ports:
-      - "9115:9115"
-
-  node-exporter:
-    image: prom/node-exporter:latest
-    restart: always
-    command:
-      - --no-collector.kernel_hung
-    ports:
-      - "9100:9100"
-
-  otel:
-    image: otel/opentelemetry-collector-contrib:latest
-    restart: always
-    volumes:
-      - ./otel/config.yaml:/etc/otelcol-contrib/config.yaml
-    ports:
-      - "8889:8889"
-      - "4318:4318"
-
-  loki:
-    image: grafana/loki:3.0.0
-    restart: always
-    command: -config.file=/etc/loki/config.yml
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki/config.yml:/etc/loki/config.yml:ro
-      - loki-data:/loki
-
   promtail:
     image: grafana/promtail:3.0.0
     restart: always
@@ -149,24 +69,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - promtail-data:/tmp
 
-  grafana:
-    image: grafana/grafana:latest
-    restart: always
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-
 volumes:
-  grafana-data:
-  loki-data:
   promtail-data:
   app1_logs:
   app2_logs:

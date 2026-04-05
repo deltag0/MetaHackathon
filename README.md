@@ -1,5 +1,12 @@
 # Meta Production Engineering Hackathon
 
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Backend-Flask-000000?logo=flask&logoColor=white)
+![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?logo=nextdotjs&logoColor=white)
+![Infra](https://img.shields.io/badge/Infra-Docker%20%7C%20Nginx-2496ED?logo=docker&logoColor=white)
+![Observability](https://img.shields.io/badge/Observability-Prometheus%20%7C%20Grafana%20%7C%20Loki-E6522C)
+![Scale Tested](https://img.shields.io/badge/Scale%20Tested-~7000%20Concurrent%20Users-success)
+
 This is the most scalable, reliable and guaranteed to wake up the on-call engineer url-shortner of all time. Provided to you by 4 students from Canada, 2 from Waterloo and 2 from Concordia.
 
 ## Quick Links
@@ -191,17 +198,7 @@ One of the problems we had was with malformed data and we would get a lone error
 
 ## Runbooks
 
-### Incident Response
-
-- [Backend Outage](#)
-- [Database Issues](#)
-- [High Latency](#)
-
-### Operational Tasks
-
-- [Scaling the Backend](#)
-- [Backup Procedures](#)
-- [Log Access](#)
+- [Runbook](docs/RUNBOOK.md)
 
 ---
 

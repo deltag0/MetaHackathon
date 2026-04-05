@@ -105,6 +105,9 @@ jobs:
             git pull origin main
 
             cat > .env << 'EOF'
+            DO_HOST_1=${{ secrets.DO_HOST_1 }}
+            DO_HOST_2=${{ secrets.DO_HOST_2 }}
+            DO_OBSERVABILITY=${{ secrets.DO_OBSERVABILITY }}
             DATABASE_NAME=${{ secrets.DATABASE_NAME }}
             DATABASE_HOST=${{ secrets.DATABASE_HOST }}
             DATABASE_PORT=${{ secrets.DATABASE_PORT }}
@@ -119,6 +122,10 @@ jobs:
             SMTP_AUTH_PASSWORD=${{ secrets.SMTP_AUTH_PASSWORD }}
             ALERT_EMAIL_TO=${{ secrets.ALERT_EMAIL_TO }}
             DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            S3_KEY=${{ secrets.S3_KEY }}
+            SECRET_S3_KEY=${{ secrets.SECRET_S3_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            LOKI_S3_BUCKET=${{ secrets.LOKI_S3_BUCKET }}
             EOF
 
             docker build -t url-shortner-app .
@@ -149,6 +156,9 @@ jobs:
             git pull origin main
 
             cat > .env << 'EOF'
+            DO_HOST_1=${{ secrets.DO_HOST_1 }}
+            DO_HOST_2=${{ secrets.DO_HOST_2 }}
+            DO_OBSERVABILITY=${{ secrets.DO_OBSERVABILITY }}
             DATABASE_NAME=${{ secrets.DATABASE_NAME }}
             DATABASE_HOST=${{ secrets.DATABASE_HOST }}
             DATABASE_PORT=${{ secrets.DATABASE_PORT }}
@@ -163,6 +173,10 @@ jobs:
             SMTP_AUTH_PASSWORD=${{ secrets.SMTP_AUTH_PASSWORD }}
             ALERT_EMAIL_TO=${{ secrets.ALERT_EMAIL_TO }}
             DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            S3_KEY=${{ secrets.S3_KEY }}
+            SECRET_S3_KEY=${{ secrets.SECRET_S3_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            LOKI_S3_BUCKET=${{ secrets.LOKI_S3_BUCKET }}
             EOF
 
             docker build -t url-shortner-app .
@@ -170,3 +184,33 @@ jobs:
 
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker compose -f docker-compose.prod.yml restart nginx
+
+      - name: Deploy observability stack to observability droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_OBSERVABILITY }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
+          script: |
+            cd ~/MetaHackathon
+            git pull origin main
+
+            cat > .env << 'EOF'
+            DO_HOST_1=${{ secrets.DO_HOST_1 }}
+            DO_HOST_2=${{ secrets.DO_HOST_2 }}
+            DO_OBSERVABILITY=${{ secrets.DO_OBSERVABILITY }}
+            SMTP_SMARTHOST=${{ secrets.SMTP_SMARTHOST }}
+            SMTP_FROM=${{ secrets.SMTP_FROM }}
+            SMTP_AUTH_USERNAME=${{ secrets.SMTP_AUTH_USERNAME }}
+            SMTP_AUTH_PASSWORD=${{ secrets.SMTP_AUTH_PASSWORD }}
+            ALERT_EMAIL_TO=${{ secrets.ALERT_EMAIL_TO }}
+            ALERT_SMS_TO=${{ secrets.ALERT_SMS_TO }}
+            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            S3_KEY=${{ secrets.S3_KEY }}
+            SECRET_S3_KEY=${{ secrets.SECRET_S3_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            LOKI_S3_BUCKET=${{ secrets.LOKI_S3_BUCKET }}
+            EOF
+
+            docker compose -f docker-compose.observability.prod.yml up -d --remove-orphans

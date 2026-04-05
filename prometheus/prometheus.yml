@@ -4,7 +4,7 @@ global:
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ['alertmanager:9093']
+        - targets: ['${DO_OBSERVABILITY}:9093']
 
 rule_files:
   - /etc/prometheus/alerts.yml
@@ -12,21 +12,31 @@ rule_files:
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090'] # Prometheus server default port
+      - targets: ['${DO_OBSERVABILITY}:9090'] # Prometheus server on observability droplet
 
   - job_name: 'otel-collector'
     static_configs:
-      - targets: ['otel:8889'] # Common default for OTel Collector Prometheus exporter
+      - targets: ['${DO_OBSERVABILITY}:8889'] # OTel Collector on observability droplet
     metrics_path: /metrics
 
-  - job_name: 'node-exporter'
+  - job_name: 'node-exporter-droplet-1'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['${DO_HOST_1}:9100']
     metrics_path: /metrics
 
-  - job_name: 'process-exporter'
+  - job_name: 'node-exporter-droplet-2'
     static_configs:
-      - targets: ['process-exporter:9256']
+      - targets: ['${DO_HOST_2}:9100']
+    metrics_path: /metrics
+
+  - job_name: 'process-exporter-droplet-1'
+    static_configs:
+      - targets: ['${DO_HOST_1}:9256']
+    metrics_path: /metrics
+
+  - job_name: 'process-exporter-droplet-2'
+    static_configs:
+      - targets: ['${DO_HOST_2}:9256']
     metrics_path: /metrics
 
   - job_name: 'blackbox-health'
@@ -35,30 +45,35 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://143.244.209.229/health/live
-          - http://143.244.209.229/health/ready
+          - http://${DO_HOST_1}:80/health/live
+          - http://${DO_HOST_1}:80/health/ready
         labels:
-          service: app
+          service: app-droplet-1
+      - targets:
+          - http://${DO_HOST_2}:80/health/live
+          - http://${DO_HOST_2}:80/health/ready
+        labels:
+          service: app-droplet-2
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
       - target_label: __address__
-        replacement: blackbox-exporter:9115
+        replacement: ${DO_OBSERVABILITY}:9115
     scrape_interval: 15s
 
   - job_name: 'blackbox-exporter'
     static_configs:
-      - targets: ['blackbox-exporter:9115']
+      - targets: ['${DO_OBSERVABILITY}:9115']
     metrics_path: /metrics
 
   - job_name: 'loki'
     static_configs:
-      - targets: ['loki:3100']
+      - targets: ['${DO_OBSERVABILITY}:3100']
     metrics_path: /metrics
 
   - job_name: 'promtail'
     static_configs:
-      - targets: ['promtail:9080']
+      - targets: ['${DO_OBSERVABILITY}:9080']
     metrics_path: /metrics
