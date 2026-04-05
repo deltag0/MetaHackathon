@@ -139,8 +139,18 @@ Logs can have additional entries to become traces. The additional entries can in
 
 So, if a bug occurs, a good first step is to look through the logs at the time it occured, and look for a `WARNING` or `ERROR` log.
 
-Users can consult the log file by SSHing in the machine running the application or by going to `localhost:3001` on the explore tab and query logs with Loki.
-  
+Users can consult the log file by SSHing in the machine running the application or by going to `localhost:3001` on the explore tab and query logs with Loki. In the worst case, if even `localhost:3001` is inaccessible, logs are stored for long term storage in an Amazon S3 storage through Loki, to be accessed from the cloud.
+
+#### 3 Example Bugs
+
+1. Caching Problem  
+One example problem we faced was during scalability testing where we were faced with too many cache misses, requiring us to visit the main Postgress database. Thanks to our test logs which displayed the cache miss and hit percentages, we were able to decrease the misses from 30% to 15%.
+
+2. Latency Problem  
+When stress testing our architecture, we originally had a single instance which ended up causing a lot of latency when we had a lot of requests at once. We knew that one of the ways to decrease latency under load woul dbe to scale horizontally, so we set up tests to track latency with 1 instance, 2, 3, 4, and 5 instances, and 4 instances performed the best. We were able to track and confirm this thanks to our metrics, allowing us to implement a robust solution.
+
+3. Malformed Data  
+One of the problems we had was with malformed data and we would get a lone error message. When fixing that problem we didn't yet have logging, but now we get warning in our logs. We were able to find there was a problem by adding unit tests, but having logs earlier would have helped pinpoint the issue faster.
 
 ---
 
@@ -150,14 +160,32 @@ Users can consult the log file by SSHing in the machine running the application 
 
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `DATABASE_HOST` | `localhost` | PostgreSQL host |
+| `DATABASE_NAME` | `hackathon_db` | PostgreSQL database name |
+| `DATABASE_HOST` | `db` | PostgreSQL host inside Docker network |
 | `DATABASE_PORT` | `5432` | PostgreSQL port |
 | `DATABASE_USER` | `postgres` | DB user |
 | `DATABASE_PASSWORD` | `postgres` | DB password |
 | `REDIS_URL` | `redis://redis:6379` | Redis connection |
-| `SECRET_KEY` | `secret` | Flask secret key |
-| `SMTP_SMARTHOST` | `smtp.gmail.com:587` | SMTP server (for alerts) |
+| `SECRET_KEY` | `random_secret_key` | Flask secret key |
+| `LOG_LEVEL` | `INFO` | Application log verbosity |
+| `LOG_FILE_PATH` | `/app/logs/app-1.log` | Per-instance app log file path |
+| `LOG_FILE_MAX_BYTES` | `10485760` | Max size for a single rotated log file |
+| `LOG_FILE_BACKUP_COUNT` | `5` | Number of rotated log files to retain |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://otel:4318` | OpenTelemetry collector endpoint |
+| `FLASK_HOST` | `0.0.0.0` | Flask bind address (if running directly) |
+| `FLASK_PORT` | `5000` | Flask port (if running directly) |
+| `FLASK_DEBUG` | `false` | Flask debug mode toggle |
+| `SMTP_SMARTHOST` | `smtp.gmail.com:587` | SMTP relay for Alertmanager |
 | `SMTP_FROM` | `alerts@example.com` | Alert sender email |
+| `SMTP_AUTH_USERNAME` | `smtp-user` | SMTP auth username |
+| `SMTP_AUTH_PASSWORD` | `smtp-password` | SMTP auth password |
+| `ALERT_EMAIL_TO` | `oncall@example.com` | Alert recipient email |
+| `ALERT_SMS_TO` | `+15551234567` | Alert recipient phone (if SMS integration is configured) |
+| `DISCORD_WEBHOOK_URL` | `https://discord.com/api/webhooks/...` | Discord webhook for alerts |
+| `S3_KEY` | `AKIA...` | AWS access key for Loki object storage |
+| `SECRET_S3_KEY` | `***` | AWS secret key for Loki object storage |
+| `AWS_REGION` | `us-east-1` | AWS region for Loki S3 bucket |
+| `LOKI_S3_BUCKET` | `metahackathon-loki-logs` | S3 bucket used by Loki for long-term log storage |
 
 ---
 
@@ -179,12 +207,6 @@ Users can consult the log file by SSHing in the machine running the application 
 
 ## Decision Log
 
-Record architectural decisions, trade-offs, and rationale.
-
-| Date | Decision | Rationale |
-|------|----------|----------|
-| 2026-04-04 | Use process-exporter for app visibility | Avoids direct app scraping |
-| 2026-04-04 | Multi-container observability stack | Comprehensive monitoring |
 
 ---
 
