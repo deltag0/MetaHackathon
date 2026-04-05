@@ -191,17 +191,7 @@ One of the problems we had was with malformed data and we would get a lone error
 
 ## Runbooks
 
-### Incident Response
-
-- [Backend Outage](#)
-- [Database Issues](#)
-- [High Latency](#)
-
-### Operational Tasks
-
-- [Scaling the Backend](#)
-- [Backup Procedures](#)
-- [Log Access](#)
+- [Runbook](docs/RUNBOOK.md)
 
 ---
 
