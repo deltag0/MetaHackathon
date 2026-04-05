@@ -209,10 +209,23 @@ services:
   # ── Observability stack ─────────────────────────────────────────────
   prometheus:
     image: prom/prometheus:latest
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        sed -e "s|\${DO_HOST_1}|$$DO_HOST_1|g" \
+            -e "s|\${DO_HOST_2}|$$DO_HOST_2|g" \
+            -e "s|\${DO_OBSERVABILITY}|$$DO_OBSERVABILITY|g" \
+            /etc/prometheus/prometheus.tmpl.yml > /tmp/prometheus.yml \
+        && exec /bin/prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.path=/prometheus
+    environment:
+      DO_HOST_1: ${DO_HOST_1}
+      DO_HOST_2: ${DO_HOST_2}
+      DO_OBSERVABILITY: ${DO_OBSERVABILITY}
     ports:
       - 9090:9090
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.tmpl.yml:ro
       - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
 
   alertmanager:
