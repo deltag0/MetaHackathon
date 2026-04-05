@@ -35,8 +35,8 @@ scrape_configs:
       module: [http_2xx]
     static_configs:
       - targets:
-          - http://nginx:80/health/live
-          - http://nginx:80/health/ready
+          - http://143.244.209.229/health/live
+          - http://143.244.209.229/health/ready
         labels:
           service: app
     relabel_configs:
