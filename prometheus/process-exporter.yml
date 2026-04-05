@@ -1,14 +1,14 @@
 process_names:
-  - name: "backend-flask"
-    comm:
-      - 'python'
+  - name: "backend-main"
     cmdline:
-      - '.*run\.py.*'
+      - '.*/gunicorn'
+      - '.*run:app.*'
 
   - name: "frontend"
     comm:
       - 'next-server (v'
-      - 'next-server'
+    cmdline:
+      - '.*next-server.*'
 
   - name: "database-postgres"
     cmdline:

@@ -1,0 +1,94 @@
+{
+  "uid": "meta-critical-alerts",
+  "title": "Meta Critical Alerts",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Firing Critical Alerts",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(ALERTS{alertstate=\"firing\",severity=\"critical\"})"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "alertlist",
+      "title": "Critical Alert List",
+      "gridPos": { "x": 8, "y": 0, "w": 16, "h": 12 },
+      "options": {
+        "maxItems": 50,
+        "sortOrder": 1,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "normal": false,
+          "inactive": false,
+          "nodata": true,
+          "error": true
+        },
+        "viewMode": "list",
+        "groupMode": "default",
+        "showInstances": true,
+        "alertName": "",
+        "dashboardAlerts": false,
+        "folder": "",
+        "datasource": "-- Grafana --"
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Critical Alerts Over Time",
+      "gridPos": { "x": 0, "y": 5, "w": 8, "h": 7 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(ALERTS{alertstate=\"firing\",severity=\"critical\"})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0
+        },
+        "overrides": []
+      }
+    }
+  ]
+}
