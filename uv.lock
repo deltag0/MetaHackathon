@@ -337,6 +337,7 @@ dependencies = [
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "peewee" },
+    { name = "peewee-migrate" },
     { name = "psycopg2-binary" },
     { name = "pybase62" },
     { name = "python-dotenv" },
@@ -360,6 +361,7 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.20" },
     { name = "opentelemetry-sdk", specifier = ">=1.20" },
     { name = "peewee", specifier = ">=3.17" },
+    { name = "peewee-migrate", specifier = ">=1.15.0" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
     { name = "pybase62", specifier = ">=1.0" },
     { name = "python-dotenv", specifier = ">=1.0" },
@@ -471,6 +473,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ad/8e/8fe6b93914ed40b9cb5162e45e1be4f8bb8cf7f5a49333aa1a2d383e4870/peewee-4.0.4.tar.gz", hash = "sha256:70e07c14a10bec8d663514bda5854e44ef15d5b03974b41f7218066b6fd3a065", size = 718021, upload-time = "2026-04-02T13:52:25.73Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c0/9b/bee274b72adc7c692bf7cb8d6b0cd4071acf2957e82dace45d3f2770470e/peewee-4.0.4-py3-none-any.whl", hash = "sha256:37ccd3f89e523c7b42eed023cd90b48d088753ddff1d74e854a9c6445e7bd797", size = 144487, upload-time = "2026-04-02T13:52:24.099Z" },
+]
+
+[[package]]
+name = "peewee-migrate"
+version = "1.15.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+    { name = "peewee" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/61/3b/3925b1facc447f0162af687ddd5b8fbd25702054cd709ef814acd436fcfe/peewee_migrate-1.15.0.tar.gz", hash = "sha256:0fd9fbc5cb2e6749d88b38c48c4ca24fb4a25368751b9c7a76cc1c78c767cf83", size = 15302, upload-time = "2026-03-12T12:17:07.188Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c6/16/6c4e54cb7852fe77a6390f53655c270fed80fd4bd1d57a9094025c0a3b3c/peewee_migrate-1.15.0-py3-none-any.whl", hash = "sha256:c94a27f0c38b9746f2ef7814e40b90128ff921b8b1921fbffec57211f4c1abcc", size = 19023, upload-time = "2026-03-12T12:17:08.299Z" },
 ]
 
 [[package]]

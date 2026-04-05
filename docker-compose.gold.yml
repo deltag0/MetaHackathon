@@ -44,6 +44,19 @@ services:
         limits:
           memory: 256M
 
+  migrator:
+    build: .
+    command: ["/app/.venv/bin/python", "scripts/run_migrations.py"]
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+    depends_on:
+      db:
+        condition: service_healthy
+
   app-1:
     build: .
     environment:
@@ -62,6 +75,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s
@@ -90,6 +105,8 @@ services:
         condition: service_healthy
       app-1:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s
@@ -118,6 +135,8 @@ services:
         condition: service_healthy
       app-1:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s
@@ -146,6 +165,8 @@ services:
         condition: service_healthy
       app-1:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s

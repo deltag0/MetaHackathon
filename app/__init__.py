@@ -123,16 +123,8 @@ def create_app():
     init_db(app)
     init_cache()
 
-    db.connect(reuse_if_open=True)
-    try:
-        db.create_tables([User, URL, Event], safe=True)
-    except Exception:
-        current_app.logger.warning(
-            "db_create_tables_skipped",
-            extra={"component": "db", "endpoint": "app.create_app", "reason": "tables_already_exist_or_race"},
-        )
-        pass  # Tables already created by another instance
-    db.close()
+    # Note: Database tables are strictly managed by peewee-migrate via the standalone migrator now.
+
 
     register_routes(app)
     init_telemetry(app)
