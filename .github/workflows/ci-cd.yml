@@ -108,12 +108,15 @@ jobs:
             docker compose build app-1 frontend
             docker tag url-shortner-app-1 url-shortner-app
 
-            # Init swarm if not already active
-            docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || docker swarm init
+            # Init swarm if not already active ("inactive" contains "active" so use exact match)
+            docker info --format '{{.Swarm.LocalNodeState}}' | grep -qx active || docker swarm init
 
             # Deploy the stack (creates or updates in-place)
-            docker stack deploy -c docker-compose.swarm.yml url-shortner || \
-              (echo "Deployment failed!" && docker stack ps url-shortner --no-trunc && exit 1)
+            if ! docker stack deploy -c docker-compose.swarm.yml url-shortner; then
+              echo "Deployment failed!"
+              docker stack ps url-shortner --no-trunc
+              exit 1
+            fi
 
             # Wait for Swarm to create the overlay network and db to be reachable
             sleep 20
