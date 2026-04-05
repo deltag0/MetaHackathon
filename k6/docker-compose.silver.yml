@@ -8,42 +8,20 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data_tier3:/var/lib/postgresql/data
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=200"
-      - "-c"
-      - "shared_buffers=256MB"
-      - "-c"
-      - "work_mem=4MB"
-      - "-c"
-      - "effective_cache_size=512MB"
-      - "-c"
-      - "synchronous_commit=off"
+      - postgres_data_tier2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 1G
 
   redis:
     image: redis:7
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --save ""
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
   migrator:
     build: .
     command: ["/app/.venv/bin/python", "-m", "scripts.run_migrations"]
@@ -67,7 +45,7 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
-      LOG_FILE_PATH: /app/logs/app-1.log
+      LOG_FILE_PATH: ${LOG_FILE_PATH_APP_1:-/app/logs/app-1.log}
     volumes:
       - ./logs/app-1:/app/logs
     depends_on:
@@ -95,69 +73,9 @@ services:
       DATABASE_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       SECRET_KEY: random_secret_key
-      LOG_FILE_PATH: /app/logs/app-2.log
+      LOG_FILE_PATH: ${LOG_FILE_PATH_APP_2:-/app/logs/app-2.log}
     volumes:
       - ./logs/app-2:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      app-1:
-        condition: service_healthy
-      migrator:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
-      interval: 10s
-      timeout: 5s
-      start_period: 15s
-      retries: 5
-    restart: always
-
-  app-3:
-    build: .
-    environment:
-      DATABASE_NAME: hackathon_db
-      DATABASE_HOST: db
-      DATABASE_PORT: "5432"
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: random_secret_key
-      LOG_FILE_PATH: /app/logs/app-3.log
-    volumes:
-      - ./logs/app-3:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      app-1:
-        condition: service_healthy
-      migrator:
-        condition: service_completed_successfully
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
-      interval: 10s
-      timeout: 5s
-      start_period: 15s
-      retries: 5
-    restart: always
-
-  app-4:
-    build: .
-    environment:
-      DATABASE_NAME: hackathon_db
-      DATABASE_HOST: db
-      DATABASE_PORT: "5432"
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      REDIS_URL: redis://redis:6379
-      SECRET_KEY: random_secret_key
-      LOG_FILE_PATH: /app/logs/app-4.log
-    volumes:
-      - ./logs/app-4:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -186,11 +104,7 @@ services:
         condition: service_healthy
       app-2:
         condition: service_healthy
-      app-3:
-        condition: service_healthy
-      app-4:
-        condition: service_healthy
     restart: always
 
 volumes:
-  postgres_data_tier3:
+  postgres_data_tier2:
