@@ -1,0 +1,93 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ${PWD}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ${PWD}/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    restart: always
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        sed -e "s|SMTP_SMARTHOST_VALUE|$$SMTP_SMARTHOST|g" \
+            -e "s|SMTP_FROM_VALUE|$$SMTP_FROM|g" \
+            -e "s|SMTP_AUTH_USERNAME_VALUE|$$SMTP_AUTH_USERNAME|g" \
+            -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
+            -e "s|ALERT_EMAIL_TO_VALUE|$$ALERT_EMAIL_TO|g" \
+            -e "s|SMTP_AUTH_PASSWORD_VALUE|$$SMTP_AUTH_PASSWORD|g" \
+            -e "s|ALERT_SMS_TO_VALUE|$$ALERT_SMS_TO|g" \
+            -e "s|DISCORD_WEBHOOK_URL_VALUE|$$DISCORD_WEBHOOK_URL|g" \
+            /etc/alertmanager/alertmanager.tmpl.yml > /tmp/alertmanager.yml \
+        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml
+    environment:
+      SMTP_SMARTHOST: ${SMTP_SMARTHOST:-localhost:25}
+      SMTP_FROM: ${SMTP_FROM:-alerts@example.com}
+      SMTP_AUTH_USERNAME: ${SMTP_AUTH_USERNAME:-}
+      SMTP_AUTH_PASSWORD: ${SMTP_AUTH_PASSWORD:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-admin@example.com}
+      ALERT_SMS_TO: ${ALERT_SMS_TO:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - ${PWD}/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
+    ports:
+      - "9093:9093"
+
+  alertmanager-discord:
+    image: benjojo/alertmanager-discord:latest
+    restart: always
+    environment:
+      DISCORD_WEBHOOK: ${DISCORD_WEBHOOK_URL:-}
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    restart: always
+    volumes:
+      - ${PWD}/prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    ports:
+      - "9115:9115"
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: always
+    volumes:
+      - ${PWD}/otel/config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "8889:8889"  # Prometheus scrape endpoint (metrics exposed by OTel)
+      - "4318:4318"  # OTLP HTTP receiver (apps push to this)
+
+  loki:
+    image: grafana/loki:3.0.0
+    restart: always
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ${PWD}/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ${PWD}/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ${PWD}/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ${PWD}/grafana/provisioning/alerting:/etc/grafana/provisioning/alerting:ro
+      - ${PWD}/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  prometheus-data:
+  loki-data:
+  grafana-data:
