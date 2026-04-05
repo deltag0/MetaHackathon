@@ -277,13 +277,15 @@ We run 2 droplets, testin each with 4 instances of our application. We chose 4 i
 
 ### Current Limits
 
-- **API Throughput:** TBD req/s
-- **Database:** PostgreSQL 16, 10GB storage
-- **Cache:** Redis, X GB
+- **Sustained throughput:** 500+ req/s
+- **Concurrent load ceiling:** ~7000 concurrent users
+- **Bottleneck:** Database saturation and host CPU/network on current 2 droplets
+- **Primary optimizations in place:** Redis caching (5–60 min TTLs), Nginx keepalive + gzip, 4 Gunicorn workers per droplet
 
-### Growth Plan
+### Scale Path
 
-Document scaling strategy and projected timelines.
+1. **Horizontal scaling:** Add more droplets and distribute app instances before upgrading managed PostgreSQL/Redis.
+2. **Sharding (if reaching ~50k+ users):** Partition user/URL/event data by user_id ranges across multiple PostgreSQL instances to unlock beyond single-database limits.
 
 ---
 
