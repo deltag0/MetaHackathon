@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 
 from playhouse.pool import PooledPostgresqlDatabase
 from peewee import DatabaseProxy, Model
@@ -12,22 +13,45 @@ class BaseModel(Model):
 
 
 def init_db(app):
-    kwargs = {
-        "host": os.environ.get("DATABASE_HOST", "localhost"),
-        "port": int(os.environ.get("DATABASE_PORT", 5432)),
-        "user": os.environ.get("DATABASE_USER", "postgres"),
-        "password": os.environ.get("DATABASE_PASSWORD", "postgres"),
-        "max_connections": 2,
-        "stale_timeout": 300,
-    }
-    sslmode = os.environ.get("DATABASE_SSLMODE", "disable")
-    if sslmode != "disable":
-        kwargs["sslmode"] = sslmode
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        parsed = urlparse(database_url)
+        db_name = parsed.path.lstrip("/")
+        kwargs = {
+            "host": parsed.hostname,
+            "port": parsed.port or 5432,
+            "user": parsed.username,
+            "password": parsed.password,
+            "max_connections": 10,
+            "stale_timeout": 300,
+        }
+        sslmode = os.environ.get("DATABASE_SSLMODE", "disable")
+        if sslmode != "disable":
+            kwargs["sslmode"] = sslmode
+    else:
+        db_name = os.environ.get("DATABASE_NAME", "hackathon_db")
+        kwargs = {
+            "host": os.environ.get("DATABASE_HOST", "localhost"),
+            "port": int(os.environ.get("DATABASE_PORT", 5432)),
+            "user": os.environ.get("DATABASE_USER", "postgres"),
+            "password": os.environ.get("DATABASE_PASSWORD", "postgres"),
+            "max_connections": 10,
+            "stale_timeout": 300,
+        }
+        sslmode = os.environ.get("DATABASE_SSLMODE", "disable")
+        if sslmode != "disable":
+            kwargs["sslmode"] = sslmode
     database = PooledPostgresqlDatabase(
-        os.environ.get("DATABASE_NAME", "hackathon_db"),
+        db_name,
         **kwargs,
     )
     db.initialize(database)
+
+    from app.models.user import User
+    from app.models.url import URL
+    from app.models.event import Event
+    with database:
+        database.create_tables([User, URL, Event], safe=True)
 
     @app.before_request
     def _db_connect():

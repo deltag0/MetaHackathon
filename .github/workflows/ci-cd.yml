@@ -131,9 +131,6 @@ jobs:
             docker build -t url-shortner-app .
             docker build -t url-shortner-frontend -f frontend/docker/Dockerfile frontend
 
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f docker-compose.prod.yml restart nginx
-
             docker run --rm \
               -e DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
               -e DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
@@ -143,6 +140,9 @@ jobs:
               -e DATABASE_SSLMODE=require \
               url-shortner-app \
               /app/.venv/bin/python -m scripts.run_migrations
+
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml restart nginx
 
       - name: Deploy to droplet 2
         uses: appleboy/ssh-action@v1.0.3

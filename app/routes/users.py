@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
+from peewee import IntegrityError
 
 from app.cache import cache_get, cache_set, cache_delete, cache_delete_pattern
 from app.database import db
@@ -62,6 +63,10 @@ def load_users_csv():
     data = request.get_json(silent=True) or {}
     filename = data.get("file", "app/data/users.csv")
 
+    # If just a bare filename (no directory), look in app/data/
+    if os.sep not in filename and "/" not in filename:
+        filename = os.path.join("app", "data", filename)
+
     filepath = os.path.join(_PROJECT_ROOT, filename)
     try:
         with open(filepath, newline="", encoding="utf-8") as f:
@@ -87,7 +92,7 @@ def load_users_csv():
         for i in range(0, len(cleaned), 100):
             User.insert_many(cleaned[i : i + 100]).on_conflict_ignore().execute()
 
-    db.execute_sql("SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));")
+    db.execute_sql("SELECT setval('users_id_seq', COALESCE((SELECT MAX(id) FROM users), 1));")
 
     return jsonify(count=len(cleaned)), 201
 
@@ -101,7 +106,7 @@ def get_user(user_id):
 
     user = User.get_or_none(User.id == user_id)
     if not user:
-        return jsonify(error="not found"), 404
+        return jsonify(error="user not found"), 404
     result = _user_dict(user)
     cache_set(cache_key, result)
     return jsonify(result)
@@ -123,13 +128,16 @@ def create_user():
         return jsonify(error="email already exists"), 409
 
     now = datetime.utcnow()
-    user = User.create(
-        email=email,
-        username=username,
-        password_hash=data.get("password_hash", ""),
-        created_at=now,
-        updated_at=now,
-    )
+    try:
+        user = User.create(
+            email=email,
+            username=username,
+            password_hash=data.get("password_hash", ""),
+            created_at=now,
+            updated_at=now,
+        )
+    except IntegrityError:
+        return jsonify(error="email already exists"), 409
     cache_delete_pattern("users:list:*")
     return jsonify(_user_dict(user)), 201
 
@@ -150,7 +158,10 @@ def update_user(user_id):
     if "username" in data:
         user.username = data["username"]
     user.updated_at = datetime.utcnow()
-    user.save()
+    try:
+        user.save()
+    except IntegrityError:
+        return jsonify(error="email already exists"), 409
 
     cache_delete("users:" + str(user_id))
     cache_delete_pattern("users:list:*")
