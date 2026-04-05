@@ -17,3 +17,4 @@ The primary bottleneck was **database query saturation**. Every GET request (lis
 - **Caching**: `X-Cache-Status` response header shows HIT/MISS from Nginx; k6 custom metrics `cache_hits`/`cache_misses` quantify Redis effectiveness; Redis `INFO` shows keyspace activity.
 - **Speed comparison**: Cached GET responses serve in <5ms (Redis) vs 50-200ms (DB query). Redirect lookups drop from ~30ms to <2ms on cache hit.
 - **Load test**: Run `k6 run k6-testing/load_test_tier3.js` — targets 500 VUs with `errors < 5%` and `p95 < 2s` thresholds.
+
