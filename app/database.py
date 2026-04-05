@@ -17,7 +17,7 @@ def init_db(app):
         "port": int(os.environ.get("DATABASE_PORT", 5432)),
         "user": os.environ.get("DATABASE_USER", "postgres"),
         "password": os.environ.get("DATABASE_PASSWORD", "postgres"),
-        "max_connections": 2,
+        "max_connections": 1,
         "stale_timeout": 300,
     }
     sslmode = os.environ.get("DATABASE_SSLMODE", "disable")

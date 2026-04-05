@@ -45,52 +45,6 @@ services:
       start_period: 15s
       retries: 5
 
-  app-3:
-    image: url-shortner-app
-    restart: always
-    environment:
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_HOST: ${DATABASE_HOST}
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app-3.log
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
-    volumes:
-      - app3_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
-      interval: 10s
-      timeout: 5s
-      start_period: 15s
-      retries: 5
-
-  app-4:
-    image: url-shortner-app
-    restart: always
-    environment:
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_HOST: ${DATABASE_HOST}
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
-      REDIS_URL: ${REDIS_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      LOG_FILE_PATH: /app/logs/app-4.log
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel:4318
-    volumes:
-      - app4_logs:/app/logs
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
-      interval: 10s
-      timeout: 5s
-      start_period: 15s
-      retries: 5
-
   nginx:
     image: nginx:latest
     restart: always
@@ -216,5 +170,3 @@ volumes:
   promtail-data:
   app1_logs:
   app2_logs:
-  app3_logs:
-  app4_logs:
