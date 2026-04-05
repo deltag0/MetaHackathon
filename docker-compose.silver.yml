@@ -22,6 +22,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  migrator:
+    build: .
+    command: ["/app/.venv/bin/python", "-m", "scripts.run_migrations"]
+    environment:
+      DATABASE_NAME: hackathon_db
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+    depends_on:
+      db:
+        condition: service_healthy
 
   app-1:
     build: .
@@ -41,6 +53,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s
@@ -69,6 +83,8 @@ services:
         condition: service_healthy
       app-1:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health/live')"]
       interval: 10s

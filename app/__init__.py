@@ -10,11 +10,8 @@ from dotenv import load_dotenv
 from flask import Flask, current_app, jsonify, g, request
 from flask_cors import CORS
 
-from app.database import init_db, db, check_db_connection
+from app.database import init_db, check_db_connection
 from app.cache import init_cache
-from app.models.user import User
-from app.models.url import URL
-from app.models.event import Event
 from app.routes import register_routes
 from app.telemetry import init_telemetry
 
@@ -122,16 +119,8 @@ def create_app():
     init_db(app)
     init_cache()
 
-    db.connect(reuse_if_open=True)
-    try:
-        db.create_tables([User, URL, Event], safe=True)
-    except Exception:
-        current_app.logger.warning(
-            "db_create_tables_skipped",
-            extra={"component": "db", "endpoint": "app.create_app", "reason": "tables_already_exist_or_race"},
-        )
-        pass  # Tables already created by another instance
-    db.close()
+    # Note: Database tables are strictly managed by peewee-migrate via the standalone migrator now.
+
 
     register_routes(app)
     init_telemetry(app)
