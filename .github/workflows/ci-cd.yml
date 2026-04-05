@@ -103,4 +103,28 @@ jobs:
           script: |
             cd ~/MetaHackathon
             git pull origin main
-            docker compose up -d --build || (echo "Deployment failed! Fetching logs..." && docker logs url-shortner-app-1-1 && exit 1)
+
+            # Build images
+            docker compose build app-1 frontend
+            docker tag url-shortner-app-1 url-shortner-app
+
+            # Init swarm if not already active
+            docker info --format '{{.Swarm.LocalNodeState}}' | grep -q active || docker swarm init
+
+            # Deploy the stack (creates or updates in-place)
+            docker stack deploy -c docker-compose.swarm.yml url-shortner || \
+              (echo "Deployment failed!" && docker stack ps url-shortner --no-trunc && exit 1)
+
+            # Wait for Swarm to create the overlay network and db to be reachable
+            sleep 20
+
+            # Run DB migrations on the Swarm overlay network (avoids conflicting with Swarm's db)
+            docker run --rm \
+              --network url-shortner_default \
+              -e DATABASE_NAME=hackathon_db \
+              -e DATABASE_HOST=db \
+              -e DATABASE_PORT=5432 \
+              -e DATABASE_USER=postgres \
+              -e DATABASE_PASSWORD=postgres \
+              url-shortner-app \
+              /app/.venv/bin/python -m scripts.run_migrations
