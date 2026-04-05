@@ -4,7 +4,7 @@ Documents what happens when each part of the service breaks and how the system r
 
 ---
 
-## 1. Database goes down
+## 1. Database Goes Down
 
 **Symptom:** PostgreSQL is unreachable or crashes.
 
@@ -17,14 +17,14 @@ Documents what happens when each part of the service breaks and how the system r
 
 ---
 
-## 2. Redis goes down
+## 2. Redis Goes Down
 
 **Symptom:** Redis is unreachable.
 
 **What happens:**
 - `GET /health` returns HTTP 200 — Redis is non-critical, `cache` field shows the error string
 - Redirects (`GET /<code>`) fall through to the database automatically — the app catches Redis exceptions and degrades gracefully
-- Cache-aside logic in `redirect.py` skips caching on write failure
+- Cache-aside logic skips caching on write failure
 - Cache invalidation on update/delete silently skips — no crash
 
 **Impact:** Slightly slower redirects (DB hit on every request instead of cache). No data loss.
@@ -33,7 +33,7 @@ Documents what happens when each part of the service breaks and how the system r
 
 ---
 
-## 3. App process is killed
+## 3. App Process Is Killed
 
 **Symptom:** The Flask process crashes or is manually killed (`docker kill <container>`).
 
@@ -41,7 +41,7 @@ Documents what happens when each part of the service breaks and how the system r
 - All in-flight requests are dropped
 - The container exits
 
-**Recovery:** `docker-compose.yml` sets `restart: always` on the `app` service. Docker automatically restarts the container within seconds. Run `docker compose up -d` once — from then on Docker manages restarts.
+**Recovery:** `docker-compose.yml` sets `restart: always` on the `app` service. Docker automatically restarts the container within seconds.
 
 **Demo:**
 ```bash
@@ -57,33 +57,49 @@ docker ps
 
 ---
 
-## 4. Bad input from clients
+## 4. Bad Input from Clients
 
 **Symptom:** Client sends malformed JSON, missing fields, or invalid URLs.
 
 **What happens:**
-- `POST /shorten` with no URL → `400 {"error": "url is required"}`
-- `POST /shorten` with invalid scheme → `400 {"error": "url must start with http:// or https://"}`
-- Any route that doesn't exist → `404 {"error": "not found"}` (JSON, not HTML)
-- Wrong HTTP method → `405 {"error": "method not allowed"}` (JSON, not HTML)
-- Unhandled server exception → `500 {"error": "internal server error"}` (JSON, not stack trace)
+
+| Scenario | Status | Response |
+|---|---|---|
+| `POST /shorten` with no URL | 400 | `{"error": "url is required"}` |
+| `POST /shorten` with invalid scheme | 400 | `{"error": "url must start with http:// or https://"}` |
+| Route does not exist | 404 | `{"error": "not found"}` |
+| Wrong HTTP method | 405 | `{"error": "method not allowed"}` |
+| Unhandled server exception | 500 | `{"error": "internal server error"}` |
 
 No crash, no stack trace exposed to the client.
 
+**Demo:**
+```bash
+curl -s -X POST http://localhost:5000/shorten \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq
+# {"error": "url is required"}
+
+curl -s -X POST http://localhost:5000/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"url": "javascript:alert(1)"}' | jq
+# {"error": "url must start with http:// or https://"}
+```
+
 ---
 
-## 5. Short code collision
+## 5. Short Code Collision
 
 **Symptom:** `_generate_short_code()` produces a code that already exists in the DB.
 
 **What happens:**
-- `POST /shorten` detects the collision via `URL.select().where(URL.short_code == short_code).exists()`
+- `POST /shorten` detects the collision via a DB existence check
 - Retries generation in a loop until a unique code is found
-- Extremely unlikely in practice (base62^7 = ~3.5 trillion combinations)
+- Extremely unlikely in practice (base62^7 ≈ 3.5 trillion combinations)
 
 ---
 
-## 6. Duplicate URL shortening
+## 6. Duplicate URL Shortening
 
 **Symptom:** The same original URL is submitted to `POST /shorten` twice.
 
@@ -94,21 +110,21 @@ No crash, no stack trace exposed to the client.
 
 ---
 
-## 7. Click logging failure
+## 7. Click Logging Failure
 
 **Symptom:** The background thread that logs click events to the DB throws an exception.
 
 **What happens:**
-- The exception is caught silently inside `_log_click` — the redirect still succeeds
+- The exception is caught silently — the redirect still succeeds
 - Click counts may be under-reported but the user is never affected
 
 ---
 
-## 8. Stale cache after link update/delete
+## 8. Stale Cache After Link Update/Delete
 
 **Symptom:** A link is updated or deleted, but the Redis TTL hasn't expired yet.
 
 **What happens:**
 - `PUT` and `DELETE` both call `cache.delete(f"url:{code}")` to invalidate immediately
-- If the cache delete fails (Redis down), the stale entry expires naturally after 1 hour (CACHE_TTL)
-- During that window, deleted links could still redirect — mitigated by the Redis health recovery described above
+- If the cache delete fails (Redis down), the stale entry expires naturally after 1 hour (TTL)
+- During that window, deleted links could still redirect — mitigated by Redis health recovery described above
