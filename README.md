@@ -12,26 +12,29 @@ You need to work with around the seed files that you can find in [MLH PE Hackath
 
 - **uv** — a fast Python package manager that handles Python versions, virtual environments, and dependencies automatically.
   Install it with:
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
 
-  # Windows (PowerShell)
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
-  For other methods see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
+    ```bash
+    # macOS / Linux
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+    # Windows (PowerShell)
+    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+
+    For other methods see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/).
+
 - PostgreSQL running locally (you can use Docker or a local instance)
 
 ## uv Basics
 
 `uv` manages your Python version, virtual environment, and dependencies automatically — no manual `python -m venv` needed.
 
-| Command | What it does |
-|---------|--------------|
-| `uv sync` | Install all dependencies (creates `.venv` automatically) |
-| `uv run <script>` | Run a script using the project's virtual environment |
-| `uv add <package>` | Add a new dependency |
-| `uv remove <package>` | Remove a dependency |
+| Command               | What it does                                             |
+| --------------------- | -------------------------------------------------------- |
+| `uv sync`             | Install all dependencies (creates `.venv` automatically) |
+| `uv run <script>`     | Run a script using the project's virtual environment     |
+| `uv add <package>`    | Add a new dependency                                     |
+| `uv remove <package>` | Remove a dependency                                      |
 
 ## Quick Start
 
