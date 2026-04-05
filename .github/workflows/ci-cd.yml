@@ -103,4 +103,4 @@ jobs:
           script: |
             cd ~/MetaHackathon
             git pull origin main
-            docker compose up -d --build
+            docker compose up -d --build || (echo "Deployment failed! Fetching logs..." && docker logs url-shortner-app-1-1 && exit 1)
