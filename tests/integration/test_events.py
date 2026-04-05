@@ -258,3 +258,30 @@ def test_bulk_load_events_invalid_details_json_inserts_with_null(client):
         assert r.status_code == 201
     finally:
         os.unlink(tmppath)
+
+
+def test_bulk_load_events_empty_details_skips_json_parse(client):
+    """CSV row with empty details field — exercises the false branch of `if entry['details']`."""
+    url_id = _create_url(client, "https://bulk-ev-emptydetails.example.com")
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, newline="", encoding="utf-8"
+    ) as f:
+        writer = csv.DictWriter(f, fieldnames=["url_id", "event_type", "details"])
+        writer.writeheader()
+        writer.writerow({"url_id": url_id, "event_type": "click", "details": ""})
+        tmppath = f.name
+
+    try:
+        r = client.post("/events/bulk", json={"file": tmppath})
+        assert r.status_code == 201
+        assert r.get_json()["count"] == 1
+    finally:
+        os.unlink(tmppath)
+
+
+def test_create_event_non_string_event_type_returns_400(client):
+    """event_type sent as integer — exercises the false branch of `if isinstance(event_type, str)`."""
+    url_id = _create_url(client, "https://ev-int-type.example.com")
+    r = client.post("/events", json={"url_id": url_id, "event_type": 123})
+    assert r.status_code == 400

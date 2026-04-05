@@ -271,3 +271,25 @@ def test_create_url_log_event_exception_is_silenced(client):
     with patch("app.routes.urls.Event.create", side_effect=Exception("db crash")):
         r = _create_url(client, "https://logevent-exc.example.com")
     assert r.status_code == 201
+
+
+def test_bulk_load_urls_without_is_active_column_uses_default(client):
+    """CSV without is_active column — exercises the false branch of `if 'is_active' in entry`."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, newline="", encoding="utf-8"
+    ) as f:
+        writer = csv.DictWriter(f, fieldnames=["short_code", "original_url", "title"])
+        writer.writeheader()
+        writer.writerow({
+            "short_code": "noactive1",
+            "original_url": "https://bulk-no-active.example.com",
+            "title": "No Active Field",
+        })
+        tmppath = f.name
+
+    try:
+        r = client.post("/urls/bulk", json={"file": tmppath})
+        assert r.status_code == 201
+        assert r.get_json()["count"] == 1
+    finally:
+        os.unlink(tmppath)

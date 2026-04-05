@@ -532,3 +532,48 @@ def test_create_app_swallows_db_create_tables_exception():
         pass  # tolerate failures if app context resolution differs between environments
     finally:
         db.initialize(orig_db)
+
+
+# Links: title length validation
+
+def test_shorten_title_too_long_returns_400(client):
+    r = client.post("/shorten", json={"url": "https://example.com", "title": "x" * 256})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "title must be 255 characters or less"
+
+
+def test_update_link_title_too_long_returns_400(client):
+    code = shorten(client, "https://example.com/long-title").get_json()["short_code"]
+    r = client.put("/api/links/" + code, json={"title": "y" * 256})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "title must be 255 characters or less"
+
+
+# Links: pagination bounds validation
+
+def test_list_links_page_zero_returns_400(client):
+    r = client.get("/api/links?page=0")
+    assert r.status_code == 400
+    assert "error" in r.get_json()
+
+
+def test_list_links_per_page_zero_returns_400(client):
+    r = client.get("/api/links?per_page=0")
+    assert r.status_code == 400
+    assert "error" in r.get_json()
+
+
+def test_list_links_per_page_over_max_returns_400(client):
+    r = client.get("/api/links?per_page=101")
+    assert r.status_code == 400
+    assert "error" in r.get_json()
+
+
+# Links: exhaust all retries returns 500
+
+def test_shorten_exhausts_retries_returns_500(client):
+    import peewee as _peewee
+    with patch("app.routes.links.URL.create", side_effect=_peewee.IntegrityError):
+        r = client.post("/shorten", json={"url": "https://no-code.example.com"})
+    assert r.status_code == 500
+    assert r.get_json()["error"] == "could not generate a unique short code"

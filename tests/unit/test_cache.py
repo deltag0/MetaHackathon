@@ -120,3 +120,20 @@ def test_cache_delete_does_not_raise_when_redis_is_not_configured():
 def test_cache_delete_silences_redis_exception():
     with _MockRedis(delete=Exception("delete failed")):
         cache_delete("some_key")  # must not raise
+
+
+# ---------------------------------------------------------------------------
+# cache_delete_pattern — multi-page scan (cursor != 0 on first call)
+# ---------------------------------------------------------------------------
+
+def test_cache_delete_pattern_iterates_until_cursor_zero():
+    """Exercises the loop body when scan returns a non-zero cursor on first call."""
+    with _MockRedis() as mock_r:
+        # First call: cursor=5 (more pages), second call: cursor=0 (done)
+        mock_r.scan.side_effect = [
+            (5, ["key:1", "key:2"]),
+            (0, ["key:3"]),
+        ]
+        cache_delete_pattern("key:*")
+        assert mock_r.scan.call_count == 2
+        assert mock_r.delete.call_count == 2
