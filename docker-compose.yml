@@ -48,7 +48,7 @@ services:
 
   migrator:
     build: .
-    command: ["/app/.venv/bin/python", "scripts/run_migrations.py"]
+    command: ["/app/.venv/bin/python", "-m", "scripts.run_migrations"]
     environment:
       DATABASE_NAME: hackathon_db
       DATABASE_HOST: db

@@ -1,11 +1,20 @@
 import os
+import sys
 import time
 import logging
+
 from app.database import db
-
-# ensure models are imported
-
+from playhouse.pool import PooledPostgresqlDatabase
 from peewee_migrate import Router
+
+database = PooledPostgresqlDatabase(
+    os.environ.get("DATABASE_NAME", "hackathon_db"),
+    host=os.environ.get("DATABASE_HOST", "localhost"),
+    port=int(os.environ.get("DATABASE_PORT", 5432)),
+    user=os.environ.get("DATABASE_USER", "postgres"),
+    password=os.environ.get("DATABASE_PASSWORD", "postgres"),
+)
+db.initialize(database)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migrator")
