@@ -165,7 +165,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ${PWD}/nginx/nginx.gold.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${PWD}/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     deploy:
       restart_policy:
         condition: any
