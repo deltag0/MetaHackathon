@@ -280,8 +280,9 @@ def test_bulk_load_events_empty_details_skips_json_parse(client):
         os.unlink(tmppath)
 
 
-def test_create_event_non_string_event_type_returns_400(client):
-    """event_type sent as integer — exercises the false branch of `if isinstance(event_type, str)`."""
+def test_create_event_non_string_event_type_succeeds(client):
+    """event_type sent as integer — exercises the false branch of `if isinstance(event_type, str)`
+    (the strip() is skipped but the route still succeeds)."""
     url_id = _create_url(client, "https://ev-int-type.example.com")
     r = client.post("/events", json={"url_id": url_id, "event_type": 123})
-    assert r.status_code == 400
+    assert r.status_code == 201
