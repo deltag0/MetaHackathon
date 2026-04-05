@@ -1,4 +1,9 @@
 process_names:
+  - name: "backend-main"
+    cmdline:
+      - '.*/gunicorn'
+      - '.*run:app.*'
+
   - name: "backend-flask"
     comm:
       - 'python'

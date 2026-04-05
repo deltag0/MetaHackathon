@@ -1,0 +1,117 @@
+groups:
+  - name: platform-health
+    interval: 30s
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus target down"
+          description: "Target {{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: HostHighCpuUsage
+        expr: 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "Node {{ $labels.instance }} CPU usage is above 85% for 10 minutes."
+
+      - alert: HostLowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} has less than 15% free space."
+
+  - name: observability-stack
+    interval: 30s
+    rules:
+      - alert: LokiUnavailable
+        expr: up{job="loki"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Loki unavailable"
+          description: "Loki is down, log queries and ingestion may be impacted."
+
+      - alert: PromtailUnavailable
+        expr: up{job="promtail"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Promtail unavailable"
+          description: "Promtail is down, new logs are not being shipped to Loki."
+
+      - alert: PromtailNoNewLogs
+        expr: increase(promtail_read_lines_total[15m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No new logs shipped by Promtail"
+          description: "Promtail has not read any new log lines in the last 15 minutes."
+
+  - name: process-health
+    interval: 30s
+    rules:
+      - alert: MainApplicationProcessMissing
+        expr: absent(namedprocess_namegroup_num_procs{groupname="backend-main"}) or namedprocess_namegroup_num_procs{groupname="backend-main"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Main application process missing"
+          description: "The backend main process (gunicorn/run.py) is not detected by process-exporter."
+
+      - alert: FrontendProcessMissing
+        expr: namedprocess_namegroup_num_procs{groupname="frontend"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Frontend process missing"
+          description: "No frontend process detected by process-exporter."
+
+      - alert: PostgresProcessMissing
+        expr: namedprocess_namegroup_num_procs{groupname="database-postgres"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Postgres process missing"
+          description: "No postgres process detected by process-exporter."
+
+      - alert: PrometheusProcessMissing
+        expr: namedprocess_namegroup_num_procs{groupname="prometheus"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus process missing"
+          description: "No prometheus process detected by process-exporter."
+
+      - alert: LokiProcessMissing
+        expr: namedprocess_namegroup_num_procs{groupname="loki"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Loki process missing"
+          description: "No loki process detected by process-exporter."
+
+      - alert: PromtailProcessMissing
+        expr: namedprocess_namegroup_num_procs{groupname="promtail"} < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Promtail process missing"
+          description: "No promtail process detected by process-exporter."

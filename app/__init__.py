@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from flask import Flask, current_app, jsonify, g, request
+from flask import Flask, Response, current_app, jsonify, g, request
 from flask_cors import CORS
 
 from app.database import init_db, db, check_db_connection
@@ -221,6 +221,18 @@ def create_app():
             db=db_status,
             cache=cache_status,
         ), status_code
+
+    @app.route("/metrics", methods=["GET"])
+    def metrics():
+        metrics_payload = (
+            "# HELP app_info Static metadata for the Flask service\n"
+            "# TYPE app_info gauge\n"
+            "app_info{service=\"url-shortener-api\",component=\"backend\"} 1\n"
+        )
+        return Response(
+            metrics_payload,
+            mimetype="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     @app.errorhandler(404)
     def not_found(e):
