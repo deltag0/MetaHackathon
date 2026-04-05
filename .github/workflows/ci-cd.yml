@@ -99,6 +99,7 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
           script: |
             cd ~/MetaHackathon
             git pull origin main
