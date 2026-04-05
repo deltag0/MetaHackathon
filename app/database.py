@@ -12,14 +12,20 @@ class BaseModel(Model):
 
 
 def init_db(app):
+    kwargs = {
+        "host": os.environ.get("DATABASE_HOST", "localhost"),
+        "port": int(os.environ.get("DATABASE_PORT", 5432)),
+        "user": os.environ.get("DATABASE_USER", "postgres"),
+        "password": os.environ.get("DATABASE_PASSWORD", "postgres"),
+        "max_connections": 2,
+        "stale_timeout": 300,
+    }
+    sslmode = os.environ.get("DATABASE_SSLMODE", "disable")
+    if sslmode != "disable":
+        kwargs["sslmode"] = sslmode
     database = PooledPostgresqlDatabase(
         os.environ.get("DATABASE_NAME", "hackathon_db"),
-        host=os.environ.get("DATABASE_HOST", "localhost"),
-        port=int(os.environ.get("DATABASE_PORT", 5432)),
-        user=os.environ.get("DATABASE_USER", "postgres"),
-        password=os.environ.get("DATABASE_PASSWORD", "postgres"),
-        max_connections=40,
-        stale_timeout=300,
+        **kwargs,
     )
     db.initialize(database)
 

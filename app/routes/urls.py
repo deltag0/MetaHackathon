@@ -3,6 +3,7 @@ import json
 import os
 import secrets
 from datetime import datetime
+from urllib.parse import urlparse
 
 import base62
 from flask import Blueprint, redirect, current_app, jsonify, request
@@ -33,6 +34,14 @@ def _log_event(url_id, user_id, event_type, details):
             "event_logging_failed",
             extra={"component": "urls", "endpoint": "urls._log_event", "value": str(details)},
         )
+
+
+def _is_valid_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:
+        return False
 
 
 def _generate_short_code(length: int = 7) -> str:
@@ -139,6 +148,9 @@ def create_url():
     if not original_url:
         return jsonify(error="original_url is required"), 400
 
+    if not _is_valid_url(original_url):
+        return jsonify(error="original_url must be a valid http or https URL"), 400
+
     if user_id is not None and not User.get_or_none(User.id == user_id):
         return jsonify(error="user not found"), 404
 
@@ -198,6 +210,8 @@ def update_url(url_id):
     if "title" in data:
         url.title = data["title"]
     if "original_url" in data:
+        if not _is_valid_url(data["original_url"]):
+            return jsonify(error="original_url must be a valid http or https URL"), 400
         url.original_url = data["original_url"]
     if "is_active" in data:
         url.is_active = bool(data["is_active"])

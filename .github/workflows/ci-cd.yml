@@ -93,10 +93,10 @@ jobs:
     needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
-      - name: Deploy to DigitalOcean
+      - name: Deploy to droplet 1 and run migrations
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DO_HOST }}
+          host: ${{ secrets.DO_HOST_1 }}
           username: root
           key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
           command_timeout: 30m
@@ -104,28 +104,67 @@ jobs:
             cd ~/MetaHackathon
             git pull origin main
 
-            docker compose build app-1 frontend
-            docker tag url-shortner-app-1 url-shortner-app
+            cat > .env << 'EOF'
+            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+            DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+            DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+            DATABASE_USER=${{ secrets.DATABASE_USER }}
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+            DATABASE_SSLMODE=require
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            SMTP_SMARTHOST=${{ secrets.SMTP_SMARTHOST }}
+            SMTP_FROM=${{ secrets.SMTP_FROM }}
+            SMTP_AUTH_USERNAME=${{ secrets.SMTP_AUTH_USERNAME }}
+            SMTP_AUTH_PASSWORD=${{ secrets.SMTP_AUTH_PASSWORD }}
+            ALERT_EMAIL_TO=${{ secrets.ALERT_EMAIL_TO }}
+            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            EOF
 
-            if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qx active; then
-              PUBLIC_IP=$(curl -s --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
-              docker swarm init --advertise-addr "$PUBLIC_IP"
-            fi
+            docker build -t url-shortner-app .
+            docker build -t url-shortner-frontend -f frontend/docker/Dockerfile frontend
 
-            if ! docker stack deploy -c docker-compose.swarm.yml url-shortner; then
-              echo "Deployment failed!"
-              docker stack ps url-shortner --no-trunc
-              exit 1
-            fi
-
-            sleep 20
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             docker run --rm \
-              --network url-shortner_default \
-              -e DATABASE_NAME=hackathon_db \
-              -e DATABASE_HOST=db \
-              -e DATABASE_PORT=5432 \
-              -e DATABASE_USER=postgres \
-              -e DATABASE_PASSWORD=postgres \
+              -e DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
+              -e DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
+              -e DATABASE_PORT=${{ secrets.DATABASE_PORT }} \
+              -e DATABASE_USER=${{ secrets.DATABASE_USER }} \
+              -e DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+              -e DATABASE_SSLMODE=require \
               url-shortner-app \
               /app/.venv/bin/python -m scripts.run_migrations
+
+      - name: Deploy to droplet 2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST_2 }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
+          script: |
+            cd ~/MetaHackathon
+            git pull origin main
+
+            cat > .env << 'EOF'
+            DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+            DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+            DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+            DATABASE_USER=${{ secrets.DATABASE_USER }}
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+            DATABASE_SSLMODE=require
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            SMTP_SMARTHOST=${{ secrets.SMTP_SMARTHOST }}
+            SMTP_FROM=${{ secrets.SMTP_FROM }}
+            SMTP_AUTH_USERNAME=${{ secrets.SMTP_AUTH_USERNAME }}
+            SMTP_AUTH_PASSWORD=${{ secrets.SMTP_AUTH_PASSWORD }}
+            ALERT_EMAIL_TO=${{ secrets.ALERT_EMAIL_TO }}
+            DISCORD_WEBHOOK_URL=${{ secrets.DISCORD_WEBHOOK_URL }}
+            EOF
+
+            docker build -t url-shortner-app .
+            docker build -t url-shortner-frontend -f frontend/docker/Dockerfile frontend
+
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans

@@ -1,0 +1,33 @@
+name: Weekly Backup
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run backup on droplet 1
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST_1 }}
+          username: root
+          key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+          command_timeout: 30m
+          script: |
+            cd ~/MetaHackathon
+
+            apt-get install -y --no-install-recommends s3cmd postgresql-client 2>/dev/null || true
+
+            DATABASE_HOST=${{ secrets.DATABASE_HOST }} \
+            DATABASE_PORT=${{ secrets.DATABASE_PORT }} \
+            DATABASE_NAME=${{ secrets.DATABASE_NAME }} \
+            DATABASE_USER=${{ secrets.DATABASE_USER }} \
+            DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }} \
+            SPACES_KEY=${{ secrets.SPACES_KEY }} \
+            SPACES_SECRET=${{ secrets.SPACES_SECRET }} \
+            SPACES_BUCKET=${{ secrets.SPACES_BUCKET }} \
+            SPACES_REGION=${{ secrets.SPACES_REGION }} \
+            bash scripts/backup.sh
