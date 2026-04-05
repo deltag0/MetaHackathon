@@ -75,5 +75,5 @@ scrape_configs:
 
   - job_name: 'promtail'
     static_configs:
-      - targets: ['${DO_OBSERVABILITY}:9080']
+      - targets: ['${DO_HOST_1}:9080', '${DO_HOST_2}:9080']
     metrics_path: /metrics
